@@ -11,4 +11,9 @@ Rails.application.routes.draw do
   # Admin auth
   post "auth/login" => "auth#login"
   get "me" => "me#show" # protected; returns the current admin
+
+  # Chores (admin-only)
+  resources :chores, only: [:index, :create] do
+    member { post :complete }
+  end
 end
