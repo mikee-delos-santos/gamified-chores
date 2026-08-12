@@ -1,0 +1,77 @@
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
+#
+# This file is the source Rails uses to define your schema when running `bin/rails
+# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
+#
+# It's strongly recommended that you check this file into your version control system.
+
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_100005) do
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_catalog.plpgsql"
+
+  create_table "child_profiles", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "family_id", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_child_profiles_on_family_id"
+  end
+
+  create_table "chores", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.bigint "completed_by_id"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id", null: false
+    t.text "description"
+    t.bigint "family_id", null: false
+    t.integer "reward_coins", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["completed_by_id"], name: "index_chores_on_completed_by_id"
+    t.index ["created_by_id"], name: "index_chores_on_created_by_id"
+    t.index ["family_id"], name: "index_chores_on_family_id"
+  end
+
+  create_table "coin_transactions", force: :cascade do |t|
+    t.integer "amount", null: false
+    t.bigint "child_profile_id", null: false
+    t.bigint "chore_id"
+    t.datetime "created_at", null: false
+    t.integer "reason", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["child_profile_id"], name: "index_coin_transactions_on_child_profile_id"
+    t.index ["chore_id"], name: "index_coin_transactions_on_chore_id"
+  end
+
+  create_table "families", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.bigint "family_id", null: false
+    t.string "name", null: false
+    t.string "password_digest", null: false
+    t.integer "role", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
+    t.index ["family_id"], name: "index_users_on_family_id"
+  end
+
+  add_foreign_key "child_profiles", "families"
+  add_foreign_key "chores", "child_profiles", column: "completed_by_id"
+  add_foreign_key "chores", "families"
+  add_foreign_key "chores", "users", column: "created_by_id"
+  add_foreign_key "coin_transactions", "child_profiles"
+  add_foreign_key "coin_transactions", "chores"
+  add_foreign_key "users", "families"
+end
