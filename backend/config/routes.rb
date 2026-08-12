@@ -16,4 +16,7 @@ Rails.application.routes.draw do
   resources :chores, only: [:index, :create] do
     member { post :complete }
   end
+
+  # Child profiles + balance (kid-facing, unauthenticated)
+  resources :child_profiles, only: [:index, :show]
 end
