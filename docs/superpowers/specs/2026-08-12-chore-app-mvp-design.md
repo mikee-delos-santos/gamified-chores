@@ -21,7 +21,7 @@ proof, polished UI.
 
 ## Architecture & stack
 
-- **Backend:** Rails 7 API-only + PostgreSQL, deployed on Railway. Serves a JSON API.
+- **Backend:** Rails 8 API-only + PostgreSQL, deployed on Railway. Serves a JSON API.
 - **Mobile:** Expo (React Native + TypeScript), single codebase, Android APK via EAS Build.
   One binary with two modes — an **Admin** area and a **Kid** area — chosen at login /
   profile-select.

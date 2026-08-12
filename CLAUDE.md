@@ -22,7 +22,7 @@ area you're working in.
 
 ## Stack
 
-- **Backend:** Rails 7 (API-only), PostgreSQL, deployed on Railway.
+- **Backend:** Rails 8 (API-only), PostgreSQL, deployed on Railway.
 - **Mobile:** Expo / React Native + TypeScript, builds via EAS (Android APK first).
 - **Project management:** Jira project **PC** ("Project Chore") on
   `markrdelossantos.atlassian.net`.
