@@ -1,0 +1,19 @@
+# Normalize line endings: keep LF in the repo, avoid CRLF churn on Windows.
+* text=auto eol=lf
+
+# Shell scripts and Rails binstubs must stay LF.
+*.sh text eol=lf
+bin/* text eol=lf
+
+# Binary assets — never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.apk binary
+*.aab binary
+*.ipa binary
+*.mp4 binary
+*.mov binary
+*.mp3 binary
+*.m4a binary
