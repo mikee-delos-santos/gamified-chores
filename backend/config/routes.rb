@@ -7,4 +7,8 @@ Rails.application.routes.draw do
 
   # JSON health check for the API and the mobile app's connectivity probe.
   get "health" => "health#show"
+
+  # Admin auth
+  post "auth/login" => "auth#login"
+  get "me" => "me#show" # protected; returns the current admin
 end
