@@ -7,5 +7,6 @@ class CoinTransaction < ApplicationRecord
   # Room to grow: store/withdraw/adjustment land here in the Coin Bank epic.
   enum :reason, { chore_reward: 0 }, default: :chore_reward
 
-  validates :amount, numericality: { only_integer: true }
+  # Decimal amounts so graded awards (e.g. 0.8 of the reward) are exact (PC-34).
+  validates :amount, numericality: true
 end

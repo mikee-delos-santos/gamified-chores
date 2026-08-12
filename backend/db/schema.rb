@@ -29,7 +29,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100005) do
     t.bigint "created_by_id", null: false
     t.text "description"
     t.bigint "family_id", null: false
-    t.integer "reward_coins", default: 0, null: false
+    t.decimal "reward_coins", precision: 10, scale: 2, default: "0.0", null: false
     t.integer "status", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
@@ -39,7 +39,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100005) do
   end
 
   create_table "coin_transactions", force: :cascade do |t|
-    t.integer "amount", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
     t.bigint "child_profile_id", null: false
     t.bigint "chore_id"
     t.datetime "created_at", null: false

@@ -7,9 +7,9 @@ class Chore < ApplicationRecord
              optional: true
   has_many :coin_transactions, dependent: :nullify
 
-  enum :status, { open: 0, completed: 1 }, default: :open
+  enum :status, { open: 0, completed: 1, rejected: 2 }, default: :open
 
   validates :title, presence: true
-  validates :reward_coins,
-            numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  # Decimal so grading can award a fraction of the reward (PC-34).
+  validates :reward_coins, numericality: { greater_than_or_equal_to: 0 }
 end
