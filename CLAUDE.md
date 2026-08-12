@@ -29,8 +29,9 @@ area you're working in.
 
 ## House rules (non-negotiable)
 
-1. **No AI co-author on commits.** Do **not** add a `Co-Authored-By: Claude ...` trailer
-   (or any AI co-author) to commits in this repo.
+1. **No AI attribution.** Do **not** add a `Co-Authored-By: Claude ...` trailer (or any AI
+   co-author) to commits, and do **not** put a "Generated with Claude Code" snippet (or
+   similar) in PR descriptions.
 2. **Cite Jira tickets with a short title, never the bare ID.** Write
    `PC-XX — short description` (e.g. `PC-8 — Rails app boots locally`), so a reader always
    knows what the ticket is without opening Jira.
