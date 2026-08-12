@@ -1,0 +1,40 @@
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ---- Secrets / env ----
+.env
+.env.*
+!.env.example
+*.pem
+
+# ================= Backend (Rails) =================
+backend/.bundle/
+backend/log/*
+backend/tmp/*
+backend/storage/*
+backend/public/assets
+backend/config/master.key
+backend/config/credentials/*.key
+backend/coverage/
+backend/.byebug_history
+!backend/log/.keep
+!backend/tmp/.keep
+
+# ================= Mobile (Expo / Node) =================
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/*.log
+mobile/.eas/
+npm-debug.*
+yarn-error.*
+
+# ---- Build artifacts ----
+*.apk
+*.aab
+*.ipa
