@@ -8,7 +8,10 @@ Deploys to Railway. Scaffolded in **PC-8 — Rails API-only app boots locally**.
 - Rails 8.1, `--api` mode, PostgreSQL (`pg`).
 - Solid Queue / Solid Cache / Solid Cable are included (Rails 8 defaults; DB-backed, no Redis).
   Background jobs (e.g. push in Epic E) will use Solid Queue.
-- Kamal was skipped — we deploy on **Railway** (a `Dockerfile` is included and usable there).
+- Kamal was skipped — we deploy on **Railway** using the **Railpack** builder, configured in
+  `railway.json` (builder + start command). The Rails-generated Dockerfile is parked as
+  `Dockerfile.disabled` so Railway doesn't auto-build with it; it still works locally via
+  `docker build -f Dockerfile.disabled`.
 - **Tests are intentionally deferred** for now (`--skip-test`); add RSpec later before the
   logic-heavy tickets (auth, chores, ledger).
 
