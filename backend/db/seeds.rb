@@ -19,4 +19,6 @@ end
   ChildProfile.find_or_create_by!(family: family, name: kid_name)
 end
 
+admin = User.order(:id).first
 puts "Seeded: #{Family.count} family, #{User.count} admin(s), #{ChildProfile.count} kid(s)"
+puts "Admin login: #{admin.email} / password" if admin
