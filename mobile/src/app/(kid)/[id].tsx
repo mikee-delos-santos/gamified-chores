@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 
@@ -10,7 +10,7 @@ import { Card, CoinChip } from '@/components/ui/card';
 import { NotificationsCard } from '@/components/ui/notifications-card';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
-import { ChildProfileDetail, CompletedChore, getChildProfile } from '@/lib/api';
+import { ChildProfileDetail, Chore, CompletedChore, getChildProfile, listOpenChores } from '@/lib/api';
 import { fmtCoins } from '@/lib/format';
 import { Color, Ink } from '@/theme/tokens';
 
@@ -26,6 +26,7 @@ export default function KidHome() {
   const childId = Number(id);
 
   const [data, setData] = useState<ChildProfileDetail | null>(null);
+  const [openChores, setOpenChores] = useState<Chore[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,9 @@ export default function KidHome() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      setData(await getChildProfile(childId));
+      const [profile, open] = await Promise.all([getChildProfile(childId), listOpenChores()]);
+      setData(profile);
+      setOpenChores(open);
     } catch {
       setError('Could not load this profile.');
     } finally {
@@ -124,6 +127,38 @@ export default function KidHome() {
             <View style={{ marginTop: 14 }}>
               <NotificationsCard />
             </View>
+
+            {openChores.length > 0 ? (
+              <View style={{ marginTop: 22 }}>
+                <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
+                  Chores to do
+                </AppText>
+                <View style={{ gap: 10 }}>
+                  {openChores.map((c) => (
+                    <Pressable
+                      key={c.id}
+                      onPress={() =>
+                        router.push(`/(kid)/chore/${c.id}?name=${encodeURIComponent(data.name)}`)
+                      }>
+                      <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <AppText size={16} weight={800} color={Color.navy}>
+                            {c.title}
+                          </AppText>
+                          {c.description ? (
+                            <AppText size={12} weight={600} color={Ink.t55}>
+                              {c.description}
+                            </AppText>
+                          ) : null}
+                        </View>
+                        <CoinChip amount={c.reward_coins} />
+                        <ChevronRight size={20} color={Color.primary} strokeWidth={2.6} />
+                      </Card>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             <View
               style={{

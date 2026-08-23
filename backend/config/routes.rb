@@ -20,6 +20,9 @@ Rails.application.routes.draw do
     end
   end
 
+  # Kid-facing list of open chores (unauthenticated).
+  get "open_chores" => "chores#open"
+
   # Child profiles: index/show are kid-facing (unauthenticated); create/update/destroy are
   # admin-only (guarded in the controller).
   resources :child_profiles, only: [:index, :show, :create, :update, :destroy]

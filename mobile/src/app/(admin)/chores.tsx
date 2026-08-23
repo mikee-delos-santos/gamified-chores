@@ -46,6 +46,7 @@ export default function AdminChores() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [reward, setReward] = useState('');
+  const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
   // Award sheet + edit sheet
@@ -80,20 +81,29 @@ export default function AdminChores() {
     setCreating(true);
     setError(null);
     try {
-      await createChore(token, {
+      const chore = await createChore(token, {
         title: title.trim(),
         description: description.trim() || undefined,
         reward_coins: coins,
       });
+      if (newPhotos.length) {
+        await uploadHowToPhotos(token, chore.id, newPhotos);
+      }
       setTitle('');
       setDescription('');
       setReward('');
+      setNewPhotos([]);
       await load();
     } catch {
       setError('Could not create the chore.');
     } finally {
       setCreating(false);
     }
+  }
+
+  async function addNewPhotos() {
+    const uris = await pickImages(true);
+    if (uris.length) setNewPhotos((prev) => [...prev, ...uris]);
   }
 
   return (
@@ -153,6 +163,11 @@ export default function AdminChores() {
                 keyboardType="numeric"
                 value={reward}
                 onChangeText={setReward}
+              />
+              {newPhotos.length > 0 ? <PhotoThumbs urls={newPhotos} size={48} /> : null}
+              <SecondaryButton
+                label={newPhotos.length ? `How-to photos (${newPhotos.length})` : 'Add how-to photos'}
+                onPress={addNewPhotos}
               />
               {creating ? (
                 <View
