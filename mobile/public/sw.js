@@ -74,7 +74,17 @@ self.addEventListener('push', (event) => {
     badge: '/icon-192.png',
     data: { url: data.url || '/' },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, options);
+      // Every push here is a chore update. Tell any open tab (e.g. a kid staring at the
+      // screen) to hard-refresh so its chores and balance are never stale.
+      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of all) {
+        client.postMessage({ type: 'chore-update', url: options.data.url });
+      }
+    })(),
+  );
 });
 
 // Tapping the notification focuses an open tab (or opens one) at the target url.
