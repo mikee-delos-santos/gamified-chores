@@ -51,7 +51,7 @@ export default function KidChoreDetail() {
   // When deep-linked from a notification there's no history to pop, so fall back to home.
   function goBack() {
     if (router.canGoBack()) router.back();
-    else router.replace('/');
+    else router.replace('/(kid)/(tabs)/chores');
   }
 
   async function addPhoto() {

@@ -36,7 +36,7 @@ export default function RoleGate() {
     if (chore) {
       return <Redirect href={`/(kid)/chore/${chore}?name=${encodeURIComponent(bound.name)}`} />;
     }
-    return <Redirect href={`/(kid)/${bound.id}`} />;
+    return <Redirect href="/(kid)/(tabs)/chores" />;
   }
 
   return (
