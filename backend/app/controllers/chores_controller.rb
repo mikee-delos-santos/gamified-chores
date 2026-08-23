@@ -16,6 +16,20 @@ class ChoresController < ApplicationController
     render json: chore_json(chore), status: :created
   end
 
+  # PATCH /chores/:id { title, description, reward_coins } — edit a chore.
+  def update
+    chore = current_family.chores.find(params[:id])
+    chore.update!(chore_params)
+    render json: chore_json(chore)
+  end
+
+  # DELETE /chores/:id — remove a chore. Its coin_transactions nullify (past earnings kept).
+  def destroy
+    chore = current_family.chores.find(params[:id])
+    chore.destroy
+    render json: { ok: true }
+  end
+
   # POST /chores/:id/complete { child_profile_id, grade (1-5) }
   # Marks the chore completed for a child and awards grade/5 of the reward,
   # atomically and idempotently (an already-completed chore is rejected).

@@ -13,12 +13,13 @@ Rails.application.routes.draw do
   get "me" => "me#show" # protected; returns the current admin
 
   # Chores (admin-only)
-  resources :chores, only: [:index, :create] do
+  resources :chores, only: [:index, :create, :update, :destroy] do
     member { post :complete }
   end
 
-  # Child profiles + balance (kid-facing, unauthenticated)
-  resources :child_profiles, only: [:index, :show]
+  # Child profiles: index/show are kid-facing (unauthenticated); create/update/destroy are
+  # admin-only (guarded in the controller).
+  resources :child_profiles, only: [:index, :show, :create, :update, :destroy]
 
   # Web Push: subscribe is open (kid devices have no login); test is admin-only.
   post "push/subscribe" => "push#subscribe"
