@@ -14,8 +14,10 @@ import {
   ChildProfile,
   createChildProfile,
   deleteChildProfile,
+  getPinStatus,
   listChildProfiles,
   renameChildProfile,
+  setFamilyPin,
 } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -90,6 +92,8 @@ export default function AdminKids() {
               <TextField placeholder="Name" value={newName} onChangeText={setNewName} />
               <PrimaryButton label="Add kid" onPress={onAdd} />
             </Card>
+
+            <PinManager token={token} />
 
             {error ? (
               <AppText size={13} weight={700} color={DANGER} style={{ marginBottom: 10 }}>
@@ -210,4 +214,66 @@ function iconBtn(bg: string) {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   };
+}
+
+// Set/change the grown-up PIN kids need to switch which kid a device is bound to.
+function PinManager({ token }: { token: string | null }) {
+  const [pinSet, setPinSet] = useState(false);
+  const [pin, setPin] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getPinStatus()
+        .then(setPinSet)
+        .catch(() => {});
+    }, []),
+  );
+
+  async function save() {
+    if (!token || busy) return;
+    if (pin.length < 4) {
+      setMsg('PIN must be at least 4 digits.');
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await setFamilyPin(token, pin);
+      setPin('');
+      setPinSet(true);
+      setMsg('Grown-up PIN saved.');
+    } catch {
+      setMsg('Could not save the PIN.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card style={{ gap: 10, padding: 16, marginBottom: 18 }}>
+      <AppText size={16} weight={800} color={Color.navy}>
+        Grown-up PIN
+      </AppText>
+      <AppText size={12} weight={600} color={Ink.t55}>
+        {pinSet
+          ? 'A PIN is set — kids need it to switch accounts. Enter a new one to change it.'
+          : "Set a PIN so a kid can't switch to another kid without a grown-up."}
+      </AppText>
+      <TextField
+        placeholder="New PIN (4+ digits)"
+        value={pin}
+        onChangeText={setPin}
+        keyboardType="number-pad"
+        secureTextEntry
+      />
+      <PrimaryButton label={pinSet ? 'Change PIN' : 'Set PIN'} onPress={save} />
+      {msg ? (
+        <AppText size={12} weight={700} color={Ink.t60}>
+          {msg}
+        </AppText>
+      ) : null}
+    </Card>
+  );
 }

@@ -238,6 +238,29 @@ export async function listOpenChores(): Promise<Chore[]> {
   return json<Chore[]>(res);
 }
 
+// --- Grown-up PIN (device binding) ---
+
+export async function setFamilyPin(token: string, pin: string): Promise<void> {
+  await apiFetch('/family/pin', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export async function getPinStatus(): Promise<boolean> {
+  const res = await apiFetch('/family/pin_status');
+  return (await json<{ pin_set: boolean }>(res)).pin_set;
+}
+
+export async function verifyFamilyPin(pin: string): Promise<boolean> {
+  const res = await apiFetch('/family/verify_pin', {
+    method: 'POST',
+    body: JSON.stringify({ pin }),
+  });
+  return (await json<{ ok: boolean }>(res)).ok;
+}
+
 // --- Child profile management (admin) ---
 
 export async function createChildProfile(token: string, name: string): Promise<ChildProfile> {
