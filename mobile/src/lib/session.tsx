@@ -29,9 +29,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<Admin | null>(null);
 
-  // Boot: read a stored token and confirm it still works. A missing token or a 401
-  // lands on signedOut; status stays 'loading' until this resolves so the admin group
-  // never flashes the login screen for an already-signed-in user.
+  // Boot: read a stored token. If one exists, trust it optimistically and go straight to
+  // signedIn, then confirm against /me in the background. Only a real 401 (token actually
+  // invalid/expired) clears the session — a transient failure (network blip, a 5xx, the
+  // backend briefly down during a deploy) must NOT log a valid user out.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -40,21 +41,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (active) setStatus('signedOut');
         return;
       }
+      if (active) {
+        setToken(stored);
+        setStatus('signedIn');
+      }
       try {
         const admin = await getMe(stored);
-        if (!active) return;
-        setToken(stored);
-        setUser(admin);
-        setStatus('signedIn');
+        if (active) setUser(admin);
       } catch (err) {
-        // Stale or invalid token: drop it and sign out. Rethrow anything that is not an
-        // auth failure so a transient network error does not silently wipe the session.
         if (err instanceof ApiError && err.status === 401) {
           await clearStoredToken(TOKEN_KEY);
-          if (active) setStatus('signedOut');
-        } else if (active) {
-          setStatus('signedOut');
+          if (active) {
+            setToken(null);
+            setUser(null);
+            setStatus('signedOut');
+          }
         }
+        // Non-auth errors: keep the session; /me will be retried on the next boot.
       }
     })();
     return () => {
