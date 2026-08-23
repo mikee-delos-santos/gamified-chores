@@ -9,6 +9,7 @@ import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card, CoinChip } from '@/components/ui/card';
 import { DangerZone } from '@/components/ui/danger-zone';
 import { NotificationsCard } from '@/components/ui/notifications-card';
+import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -21,7 +22,9 @@ import {
   listChildProfiles,
   listChores,
   updateChore,
+  uploadHowToPhotos,
 } from '@/lib/api';
+import { pickImages } from '@/lib/pick-images';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -289,6 +292,17 @@ function ChoreRow({
         <CoinChip amount={chore.reward_coins} />
       </View>
 
+      {chore.how_to_photo_urls.length > 0 ? <PhotoThumbs urls={chore.how_to_photo_urls} size={48} /> : null}
+
+      {chore.proof_photo_url ? (
+        <View style={{ gap: 4 }}>
+          <AppText size={12} weight={700} color={Ink.t55}>
+            Proof from kid
+          </AppText>
+          <PhotoThumbs urls={[chore.proof_photo_url]} size={64} />
+        </View>
+      ) : null}
+
       {done ? (
         <View
           style={{
@@ -355,6 +369,7 @@ function EditChoreSheet({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [reward, setReward] = useState('');
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -364,11 +379,17 @@ function EditChoreSheet({
       setTitle(chore.title);
       setDescription(chore.description ?? '');
       setReward(String(chore.reward_coins));
+      setPendingPhotos([]);
       setErr(null);
     }, [chore]),
   );
 
   if (!chore) return null;
+
+  async function addPhotos() {
+    const uris = await pickImages(true);
+    if (uris.length) setPendingPhotos((prev) => [...prev, ...uris]);
+  }
 
   async function save() {
     if (!token || !chore) return;
@@ -385,6 +406,9 @@ function EditChoreSheet({
         description: description.trim() || undefined,
         reward_coins: coins,
       });
+      if (pendingPhotos.length) {
+        await uploadHowToPhotos(token, chore.id, pendingPhotos);
+      }
       onDone();
     } catch {
       setErr('Could not save. Try again.');
@@ -421,6 +445,19 @@ function EditChoreSheet({
             value={reward}
             onChangeText={setReward}
           />
+
+          <View style={{ gap: 8 }}>
+            <AppText size={13} weight={700} color={Ink.t60}>
+              How-to photos
+            </AppText>
+            {chore.how_to_photo_urls.length > 0 ? <PhotoThumbs urls={chore.how_to_photo_urls} /> : null}
+            {pendingPhotos.length > 0 ? <PhotoThumbs urls={pendingPhotos} /> : null}
+            <SecondaryButton
+              label={pendingPhotos.length ? `Add more (${pendingPhotos.length} new)` : 'Add how-to photos'}
+              onPress={addPhotos}
+            />
+          </View>
+
           {err ? (
             <AppText size={13} weight={700} color="#c8452f">
               {err}

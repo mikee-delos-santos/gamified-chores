@@ -3,6 +3,8 @@
 // The base URL comes from EXPO_PUBLIC_API_URL (Expo inlines EXPO_PUBLIC_* at build time).
 // See .env.example. Android emulators reach the host machine at 10.0.2.2, not localhost.
 
+import { Platform } from 'react-native';
+
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000';
 
 export class ApiError extends Error {
@@ -63,6 +65,8 @@ export interface Chore {
   created_by: number | null;
   completed_by: number | null;
   completed_at: string | null;
+  how_to_photo_urls: string[];
+  proof_photo_url: string | null;
 }
 
 /** A chore plus the award/balance that completing it produced. */
@@ -158,6 +162,44 @@ export async function updateChore(
 
 export async function deleteChore(token: string, id: number): Promise<void> {
   await apiFetch(`/chores/${id}`, { method: 'DELETE', headers: authHeaders(token) });
+}
+
+// --- Photo uploads (multipart) ---
+// Turn local image URIs (from expo-image-picker) into a multipart body. On web a URI is a
+// blob: URL we fetch back into a Blob; on native, RN's FormData accepts a {uri,name,type} file.
+async function imageFormData(field: string, uris: string[]): Promise<FormData> {
+  const form = new FormData();
+  for (let i = 0; i < uris.length; i += 1) {
+    if (Platform.OS === 'web') {
+      const blob = await fetch(uris[i]).then((r) => r.blob());
+      form.append(field, blob, `photo-${Date.now()}-${i}.jpg`);
+    } else {
+      // React Native FormData file descriptor.
+      form.append(field, { uri: uris[i], name: `photo-${i}.jpg`, type: 'image/jpeg' } as unknown as Blob);
+    }
+  }
+  return form;
+}
+
+/** Attach one or more admin how-to photos to a chore (multipart PATCH). */
+export async function uploadHowToPhotos(token: string, id: number, uris: string[]): Promise<Chore> {
+  const res = await fetch(`${API_URL}/chores/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(token), // no Content-Type: let the runtime set the multipart boundary
+    body: await imageFormData('how_to_photos[]', uris),
+  });
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
+  return json<Chore>(res);
+}
+
+/** Attach a kid's proof photo to a chore (multipart POST, unauthenticated). */
+export async function uploadProofPhoto(id: number, uri: string): Promise<Chore> {
+  const res = await fetch(`${API_URL}/chores/${id}/proof`, {
+    method: 'POST',
+    body: await imageFormData('proof_photo', [uri]),
+  });
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
+  return json<Chore>(res);
 }
 
 export interface CompleteChoreInput {
