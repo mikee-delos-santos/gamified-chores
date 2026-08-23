@@ -1,12 +1,15 @@
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AppText } from '@/components/ui/app-text';
+import { PrimaryButton } from '@/components/ui/button';
+import { CoinIcon } from '@/components/ui/coin-icon';
+import { Screen } from '@/components/ui/screen';
+import { TextField } from '@/components/ui/text-field';
 import { ApiError } from '@/lib/api';
 import { useSession } from '@/lib/session';
+import { Color, Ink } from '@/theme/tokens';
 
 export default function AdminLogin() {
   const { status, signIn } = useSession();
@@ -29,7 +32,7 @@ export default function AdminLogin() {
       router.replace('/(admin)/chores');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setError('Invalid email or password.');
+        setError('That email or password did not work.');
       } else {
         setError('Could not reach the server. Try again.');
       }
@@ -39,79 +42,59 @@ export default function AdminLogin() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Parent login</ThemedText>
+    <Screen>
+      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <CoinIcon size={30} />
+          <AppText size={17} weight={800} color={Color.navy}>
+            Faye Coins
+          </AppText>
+        </View>
+        <AppText size={28} weight={900} color={Color.navy} lineHeight={32}>
+          Grown-up sign in
+        </AppText>
+        <AppText size={13} weight={700} color={Ink.t62} lineHeight={20} style={{ marginBottom: 8 }}>
+          Sign in to set chores and award coins.
+        </AppText>
 
-        <TextInput
-          style={styles.input}
+        <TextField
           placeholder="Email"
-          placeholderTextColor="#999"
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <TextField placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
 
         {error ? (
-          <ThemedText type="small" style={styles.error}>
+          <AppText size={13} weight={700} color="#c8452f">
             {error}
-          </ThemedText>
+          </AppText>
         ) : null}
 
-        <Pressable
-          style={[styles.button, submitting && styles.buttonDisabled]}
-          disabled={submitting}
-          onPress={onSubmit}>
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <ThemedText type="default" style={styles.buttonLabel}>
-              Log in
-            </ThemedText>
-          )}
-        </Pressable>
+        {submitting ? (
+          <View
+            style={{
+              backgroundColor: Color.primary,
+              borderRadius: 22,
+              paddingVertical: 17,
+              alignItems: 'center',
+              borderBottomWidth: 6,
+              borderBottomColor: Color.primaryPress,
+            }}>
+            <ActivityIndicator color={Color.white} />
+          </View>
+        ) : (
+          <PrimaryButton label="Sign in" onPress={onSubmit} />
+        )}
 
-        <Pressable onPress={() => router.replace('/')}>
-          <ThemedText type="small" style={styles.back}>
+        <Pressable onPress={() => router.replace('/')} style={{ alignItems: 'center', marginTop: 4 }}>
+          <AppText size={14} weight={800} color={Ink.t55}>
             Back
-          </ThemedText>
+          </AppText>
         </Pressable>
-      </SafeAreaView>
-    </ThemedView>
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1, justifyContent: 'center', gap: 12, padding: 24 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-  error: { color: '#d33' },
-  button: {
-    backgroundColor: '#3b6cff',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonLabel: { color: '#fff', fontSize: 16 },
-  back: { textAlign: 'center', marginTop: 8, opacity: 0.7 },
-});

@@ -1,18 +1,15 @@
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Check, Star } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, FlatList, Modal, Pressable, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AppText } from '@/components/ui/app-text';
+import { Avatar } from '@/components/ui/avatar';
+import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
+import { Card, CoinChip } from '@/components/ui/card';
+import { Pop } from '@/components/ui/pop';
+import { Screen } from '@/components/ui/screen';
+import { TextField } from '@/components/ui/text-field';
 import {
   ChildProfile,
   Chore,
@@ -21,15 +18,13 @@ import {
   listChildProfiles,
   listChores,
 } from '@/lib/api';
+import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
+import { Color, Ink, Radius } from '@/theme/tokens';
 
 // award = grade/5 × reward, rounded to 2 decimals for display.
 function awardFor(grade: number, reward: number): number {
   return Math.round((grade / 5) * reward * 100) / 100;
-}
-
-function stars(n: number): string {
-  return '★'.repeat(n) + '☆'.repeat(5 - n);
 }
 
 export default function AdminChores() {
@@ -46,7 +41,7 @@ export default function AdminChores() {
   const [reward, setReward] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Mark-done modal
+  // Award sheet
   const [target, setTarget] = useState<Chore | null>(null);
 
   const load = useCallback(async () => {
@@ -71,7 +66,7 @@ export default function AdminChores() {
     if (!token) return;
     const coins = Number(reward);
     if (!title.trim() || Number.isNaN(coins) || coins <= 0) {
-      setError('Enter a title and a positive reward.');
+      setError('Enter a title and a reward above 0.');
       return;
     }
     setCreating(true);
@@ -94,91 +89,105 @@ export default function AdminChores() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.header}>
-          <ThemedText type="title">Chores</ThemedText>
-          <View style={styles.headerActions}>
-            <Pressable onPress={() => router.replace('/')}>
-              <ThemedText type="small" style={styles.headerLink}>
-                Home
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={async () => {
-                await signOut();
-                router.replace('/');
+    <Screen padded={false}>
+      <FlatList<Chore>
+        data={chores}
+        keyExtractor={(c) => String(c.id)}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        ListHeaderComponent={
+          <View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                paddingBottom: 16,
               }}>
-              <ThemedText type="small" style={styles.headerLink}>
-                Log out
-              </ThemedText>
-            </Pressable>
+              <AppText size={24} weight={800} color={Color.navy}>
+                Chores
+              </AppText>
+              <Pressable
+                hitSlop={8}
+                onPress={async () => {
+                  await signOut();
+                  router.replace('/');
+                }}>
+                <AppText size={14} weight={800} color={Ink.t55}>
+                  Sign out
+                </AppText>
+              </Pressable>
+            </View>
+
+            <Card style={{ gap: 10, padding: 16, marginBottom: 18 }}>
+              <AppText size={16} weight={800} color={Color.navy}>
+                New chore
+              </AppText>
+              <TextField placeholder="Chore title" value={title} onChangeText={setTitle} />
+              <TextField
+                placeholder="Description (optional)"
+                value={description}
+                onChangeText={setDescription}
+              />
+              <TextField
+                placeholder="Reward coins"
+                keyboardType="numeric"
+                value={reward}
+                onChangeText={setReward}
+              />
+              {creating ? (
+                <View
+                  style={{
+                    backgroundColor: Color.primary,
+                    borderRadius: Radius.card,
+                    paddingVertical: 17,
+                    alignItems: 'center',
+                    borderBottomWidth: 6,
+                    borderBottomColor: Color.primaryPress,
+                  }}>
+                  <ActivityIndicator color={Color.white} />
+                </View>
+              ) : (
+                <PrimaryButton label="Add chore" onPress={onCreate} />
+              )}
+            </Card>
+
+            {error ? (
+              <AppText size={13} weight={700} color="#c8452f" style={{ marginBottom: 10 }}>
+                {error}
+              </AppText>
+            ) : null}
+
+            {!loading && chores.length > 0 ? (
+              <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
+                All chores
+              </AppText>
+            ) : null}
           </View>
-        </View>
-
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="New chore title"
-            placeholderTextColor="#999"
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Description (optional)"
-            placeholderTextColor="#999"
-            value={description}
-            onChangeText={setDescription}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Reward coins"
-            placeholderTextColor="#999"
-            keyboardType="numeric"
-            value={reward}
-            onChangeText={setReward}
-          />
-          <Pressable
-            style={[styles.primary, creating && styles.disabled]}
-            disabled={creating}
-            onPress={onCreate}>
-            {creating ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText type="default" style={styles.primaryLabel}>
-                Add chore
-              </ThemedText>
-            )}
-          </Pressable>
-        </View>
-
-        {error ? (
-          <ThemedText type="small" style={styles.error}>
-            {error}
-          </ThemedText>
-        ) : null}
-
-        {loading ? (
-          <ActivityIndicator style={styles.loader} />
-        ) : (
-          <FlatList
-            data={chores}
-            keyExtractor={(c) => String(c.id)}
-            contentContainerStyle={styles.list}
-            ListEmptyComponent={
-              <ThemedText type="small" style={styles.empty}>
-                No chores yet. Add one above.
-              </ThemedText>
-            }
-            renderItem={({ item }) => (
-              <ChoreRow chore={item} onMarkDone={() => setTarget(item)} />
-            )}
-          />
+        }
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator color={Color.primary} style={{ marginTop: 24 }} />
+          ) : (
+            <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
+              <AppText size={15} weight={800} color={Color.navy}>
+                No chores yet
+              </AppText>
+              <AppText size={13} weight={700} color={Ink.t55} center style={{ marginTop: 4 }}>
+                Add one above to get started.
+              </AppText>
+            </Card>
+          )
+        }
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        renderItem={({ item, index }) => (
+          <Pop delay={index * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
+            <ChoreRow chore={item} onAward={() => setTarget(item)} />
+          </Pop>
         )}
-      </SafeAreaView>
+      />
 
-      <MarkDoneModal
+      <AwardSheet
         chore={target}
         token={token}
         onClose={() => setTarget(null)}
@@ -187,34 +196,62 @@ export default function AdminChores() {
           await load();
         }}
       />
-    </ThemedView>
+    </Screen>
   );
 }
 
-function ChoreRow({ chore, onMarkDone }: { chore: Chore; onMarkDone: () => void }) {
+function ChoreRow({ chore, onAward }: { chore: Chore; onAward: () => void }) {
   const done = chore.status !== 'open';
   return (
-    <ThemedView style={styles.row}>
-      <View style={styles.rowMain}>
-        <ThemedText type="default">{chore.title}</ThemedText>
-        <ThemedText type="small" style={styles.muted}>
-          {chore.reward_coins} coins
-          {done && chore.grade ? `  ·  done ${stars(chore.grade)}` : ''}
-          {done && !chore.grade ? `  ·  ${chore.status}` : ''}
-        </ThemedText>
+    <Card style={{ padding: 14, gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <AppText size={16} weight={800} color={Color.navy}>
+            {chore.title}
+          </AppText>
+          {chore.description ? (
+            <AppText size={12} weight={600} color={Ink.t55}>
+              {chore.description}
+            </AppText>
+          ) : null}
+        </View>
+        <CoinChip amount={chore.reward_coins} />
       </View>
-      {!done ? (
-        <Pressable style={styles.markBtn} onPress={onMarkDone}>
-          <ThemedText type="small" style={styles.markLabel}>
-            Mark done
-          </ThemedText>
-        </Pressable>
-      ) : null}
-    </ThemedView>
+
+      {done ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: Color.softBlue,
+            borderRadius: Radius.chip,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+          }}>
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: Color.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Check size={13} color={Color.white} strokeWidth={3} />
+          </View>
+          <AppText size={13} weight={800} color={Color.navy}>
+            Awarded{chore.grade ? ` · ${chore.grade}/5` : ''}
+          </AppText>
+        </View>
+      ) : (
+        <SecondaryButton label="Award to a kid" onPress={onAward} />
+      )}
+    </Card>
   );
 }
 
-function MarkDoneModal({
+function AwardSheet({
   chore,
   token,
   onClose,
@@ -231,7 +268,6 @@ function MarkDoneModal({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Load the profile picker each time the modal opens for a chore.
   useFocusEffect(
     useCallback(() => {
       if (!chore) return;
@@ -257,7 +293,7 @@ function MarkDoneModal({
       await completeChore(token, chore.id, { child_profile_id: childId, grade });
       onDone();
     } catch {
-      setErr('Could not mark it done.');
+      setErr('Could not award it. Try again.');
     } finally {
       setBusy(false);
     }
@@ -267,137 +303,101 @@ function MarkDoneModal({
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <ThemedView style={styles.sheet}>
-          <ThemedText type="subtitle">{chore.title}</ThemedText>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(18,58,94,0.45)' }}>
+        <View
+          style={{
+            backgroundColor: Color.appBg,
+            borderTopLeftRadius: Radius.sheet,
+            borderTopRightRadius: Radius.sheet,
+            paddingHorizontal: 20,
+            paddingTop: 22,
+            paddingBottom: 28,
+            gap: 14,
+          }}>
+          <AppText size={22} weight={900} color={Color.navy}>
+            {chore.title}
+          </AppText>
 
-          <ThemedText type="small" style={styles.muted}>
-            Who did it?
-          </ThemedText>
-          <View style={styles.chips}>
-            {profiles.map((p) => (
-              <Pressable
-                key={p.id}
-                style={[styles.chip, childId === p.id && styles.chipOn]}
-                onPress={() => setChildId(p.id)}>
-                <ThemedText type="small" style={childId === p.id ? styles.chipOnLabel : undefined}>
-                  {p.name}
-                </ThemedText>
-              </Pressable>
-            ))}
+          <View style={{ gap: 8 }}>
+            <AppText size={13} weight={700} color={Ink.t60}>
+              Who did it?
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {profiles.map((p) => {
+                const on = childId === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setChildId(p.id)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingVertical: 7,
+                      paddingHorizontal: 12,
+                      borderRadius: Radius.pill,
+                      borderWidth: 2,
+                      borderColor: on ? Color.primary : Color.softBlue,
+                      backgroundColor: on ? Color.primary : Color.card,
+                    }}>
+                    <Avatar name={p.name} size={24} onPrimary={on} />
+                    <AppText size={13} weight={800} color={on ? Color.white : Color.navy}>
+                      {p.name}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
-          <ThemedText type="small" style={styles.muted}>
-            Grade
-          </ThemedText>
-          <View style={styles.starRow}>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Pressable key={n} onPress={() => setGrade(n)}>
-                <ThemedText style={[styles.star, n <= grade && styles.starOn]}>★</ThemedText>
-              </Pressable>
-            ))}
+          <View style={{ gap: 8 }}>
+            <AppText size={13} weight={700} color={Ink.t60}>
+              How well?
+            </AppText>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} onPress={() => setGrade(n)} hitSlop={4}>
+                  <Star
+                    size={34}
+                    color={n <= grade ? Color.coinGold : Color.dashed}
+                    fill={n <= grade ? Color.coinGold : 'transparent'}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            <AppText size={13} weight={700} color={Ink.t55} tabular>
+              Earns {fmtCoins(preview)} of {fmtCoins(chore.reward_coins)} coins
+            </AppText>
           </View>
-          <ThemedText type="small" style={styles.preview}>
-            {grade}★ → {preview} of {chore.reward_coins} coins
-          </ThemedText>
 
           {err ? (
-            <ThemedText type="small" style={styles.error}>
+            <AppText size={13} weight={700} color="#c8452f">
               {err}
-            </ThemedText>
+            </AppText>
           ) : null}
 
-          <View style={styles.sheetActions}>
-            <Pressable style={styles.secondary} onPress={onClose} disabled={busy}>
-              <ThemedText type="small">Cancel</ThemedText>
-            </Pressable>
-            <Pressable
-              style={[styles.primary, styles.flex1, busy && styles.disabled]}
-              onPress={confirm}
-              disabled={busy}>
-              {busy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <ThemedText type="default" style={styles.primaryLabel}>
-                  Confirm
-                </ThemedText>
-              )}
-            </Pressable>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <SecondaryButton label="Cancel" onPress={onClose} style={{ flex: 1 }} />
+            {busy ? (
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: Color.primary,
+                  borderRadius: Radius.card,
+                  paddingVertical: 17,
+                  alignItems: 'center',
+                  borderBottomWidth: 6,
+                  borderBottomColor: Color.primaryPress,
+                }}>
+                <ActivityIndicator color={Color.white} />
+              </View>
+            ) : (
+              <PrimaryButton label="Give coins" onPress={confirm} style={{ flex: 1 }} />
+            )}
           </View>
-        </ThemedView>
+        </View>
       </View>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1, padding: 16 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  headerActions: { flexDirection: 'row', gap: 16 },
-  headerLink: { color: '#3b6cff' },
-  form: { gap: 8, marginBottom: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 15,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-  primary: {
-    backgroundColor: '#3b6cff',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  primaryLabel: { color: '#fff' },
-  disabled: { opacity: 0.6 },
-  loader: { marginTop: 24 },
-  list: { gap: 8, paddingBottom: 24 },
-  empty: { textAlign: 'center', opacity: 0.7, marginTop: 24 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
-  },
-  rowMain: { flex: 1, gap: 2 },
-  muted: { opacity: 0.7 },
-  markBtn: {
-    backgroundColor: '#e6efff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  markLabel: { color: '#3b6cff' },
-  error: { color: '#d33', marginVertical: 4 },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { padding: 20, borderTopLeftRadius: 16, borderTopRightRadius: 16, gap: 10 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  chipOn: { backgroundColor: '#3b6cff', borderColor: '#3b6cff' },
-  chipOnLabel: { color: '#fff' },
-  starRow: { flexDirection: 'row', gap: 4 },
-  star: { fontSize: 32, color: '#ccc' },
-  starOn: { color: '#ffb400' },
-  preview: { opacity: 0.9 },
-  sheetActions: { flexDirection: 'row', gap: 12, marginTop: 8, alignItems: 'center' },
-  secondary: { paddingVertical: 12, paddingHorizontal: 16 },
-  flex1: { flex: 1 },
-});
