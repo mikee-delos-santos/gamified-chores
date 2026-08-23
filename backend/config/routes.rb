@@ -19,4 +19,8 @@ Rails.application.routes.draw do
 
   # Child profiles + balance (kid-facing, unauthenticated)
   resources :child_profiles, only: [:index, :show]
+
+  # Web Push: subscribe is open (kid devices have no login); test is admin-only.
+  post "push/subscribe" => "push#subscribe"
+  post "push/test" => "push#test"
 end

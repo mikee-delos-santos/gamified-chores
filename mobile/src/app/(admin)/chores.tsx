@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card, CoinChip } from '@/components/ui/card';
+import { NotificationsCard } from '@/components/ui/notifications-card';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -151,6 +152,10 @@ export default function AdminChores() {
                 <PrimaryButton label="Add chore" onPress={onCreate} />
               )}
             </Card>
+
+            <View style={{ marginBottom: 18 }}>
+              <NotificationsCard adminToken={token} />
+            </View>
 
             {error ? (
               <AppText size={13} weight={700} color="#c8452f" style={{ marginBottom: 10 }}>
