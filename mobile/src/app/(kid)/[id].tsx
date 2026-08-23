@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { BalanceCard } from '@/components/ui/balance-card';
 import { Card, CoinChip } from '@/components/ui/card';
+import { NotificationsCard } from '@/components/ui/notifications-card';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { ChildProfileDetail, CompletedChore, getChildProfile } from '@/lib/api';
@@ -119,6 +120,10 @@ export default function KidHome() {
             </View>
 
             <BalanceCard balance={data.balance} />
+
+            <View style={{ marginTop: 14 }}>
+              <NotificationsCard />
+            </View>
 
             <View
               style={{

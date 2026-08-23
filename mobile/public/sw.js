@@ -5,7 +5,7 @@
 // a new deploy is served as soon as it is reachable (no stale code). skipWaiting + clients.claim
 // make a new worker take control on the next load.
 
-const CACHE = 'faye-coins-shell-v1';
+const CACHE = 'faye-coins-shell-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -53,6 +53,48 @@ self.addEventListener('fetch', (event) => {
         }
         throw err;
       }
+    })(),
+  );
+});
+
+// --- Web Push ---
+
+// A push arrived from the backend: show the notification. Payload is JSON { title, body, url }.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  const title = data.title || 'Faye Coins';
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: data.url || '/' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Tapping the notification focuses an open tab (or opens one) at the target url.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    (async () => {
+      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of all) {
+        if ('focus' in client) {
+          try {
+            await client.navigate(url);
+          } catch (e) {
+            /* cross-origin or unsupported; just focus */
+          }
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     })(),
   );
 });

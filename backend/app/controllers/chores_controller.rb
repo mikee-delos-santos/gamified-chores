@@ -12,6 +12,7 @@ class ChoresController < ApplicationController
     chore = current_family.chores.new(chore_params)
     chore.created_by = current_user
     chore.save!
+    PushNotifier.notify_family(current_family, title: "New chore", body: chore.title, url: "/")
     render json: chore_json(chore), status: :created
   end
 
@@ -37,6 +38,13 @@ class ChoresController < ApplicationController
       chore.update!(status: :completed, completed_by: child, completed_at: Time.current, grade: grade)
       CoinTransaction.create!(child_profile: child, amount: award, chore: chore, reason: :chore_reward)
     end
+
+    PushNotifier.notify_family(
+      current_family,
+      title: "Nice work, #{child.name}!",
+      body: "#{award.to_f} coins for #{chore.title}",
+      url: "/",
+    )
 
     render json: chore_json(chore).merge(awarded: award.to_f, child_balance: child.balance.to_f)
   end
