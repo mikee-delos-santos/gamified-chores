@@ -152,7 +152,25 @@ export default function KidHome() {
               <Avatar name={data.name} size={34} />
             </View>
 
-            <BalanceCard balance={data.balance} />
+            <Pressable onPress={() => router.push(`/(kid)/bank/${childId}`)}>
+              <BalanceCard balance={data.balance} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push(`/(kid)/bank/${childId}`)}
+              hitSlop={6}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                marginTop: 10,
+              }}>
+              <AppText size={14} weight={800} color={Color.primary}>
+                Open coin bank
+              </AppText>
+              <ChevronRight size={18} color={Color.primary} strokeWidth={2.6} />
+            </Pressable>
 
             <View style={{ marginTop: 14 }}>
               <NotificationsCard />

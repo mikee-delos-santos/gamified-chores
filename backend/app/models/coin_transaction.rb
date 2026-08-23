@@ -4,8 +4,9 @@ class CoinTransaction < ApplicationRecord
   belongs_to :child_profile
   belongs_to :chore, optional: true
 
-  # Room to grow: store/withdraw/adjustment land here in the Coin Bank epic.
-  enum :reason, { chore_reward: 0 }, default: :chore_reward
+  # chore_reward: earned by finishing a chore. cash_out: spent via an approved cash-out request
+  # (negative amount). adjustment: a manual grown-up correction.
+  enum :reason, { chore_reward: 0, cash_out: 1, adjustment: 2 }, default: :chore_reward
 
   # Decimal amounts so graded awards (e.g. 0.8 of the reward) are exact (PC-34).
   validates :amount, numericality: true
