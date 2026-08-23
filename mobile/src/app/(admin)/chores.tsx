@@ -10,6 +10,7 @@ import { Card, CoinChip } from '@/components/ui/card';
 import { DangerZone } from '@/components/ui/danger-zone';
 import { NotificationsCard } from '@/components/ui/notifications-card';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
+import { usePhotoSource } from '@/components/ui/photo-source-sheet';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -24,7 +25,6 @@ import {
   updateChore,
   uploadHowToPhotos,
 } from '@/lib/api';
-import { pickImages } from '@/lib/pick-images';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -52,6 +52,8 @@ export default function AdminChores() {
   // Award sheet + edit sheet
   const [target, setTarget] = useState<Chore | null>(null);
   const [editTarget, setEditTarget] = useState<Chore | null>(null);
+
+  const { choose, sheet } = usePhotoSource();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -102,12 +104,13 @@ export default function AdminChores() {
   }
 
   async function addNewPhotos() {
-    const uris = await pickImages(true);
+    const uris = await choose(true);
     if (uris.length) setNewPhotos((prev) => [...prev, ...uris]);
   }
 
   return (
     <Screen padded={false}>
+      {sheet}
       <FlatList<Chore>
         data={chores}
         keyExtractor={(c) => String(c.id)}
@@ -387,6 +390,7 @@ function EditChoreSheet({
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const { choose, sheet } = usePhotoSource();
 
   useFocusEffect(
     useCallback(() => {
@@ -402,7 +406,7 @@ function EditChoreSheet({
   if (!chore) return null;
 
   async function addPhotos() {
-    const uris = await pickImages(true);
+    const uris = await choose(true);
     if (uris.length) setPendingPhotos((prev) => [...prev, ...uris]);
   }
 
@@ -445,6 +449,7 @@ function EditChoreSheet({
             paddingBottom: 28,
             gap: 12,
           }}>
+          {sheet}
           <AppText size={22} weight={900} color={Color.navy}>
             Edit chore
           </AppText>

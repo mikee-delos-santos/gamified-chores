@@ -7,9 +7,9 @@ import { AppText } from '@/components/ui/app-text';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card, CoinChip } from '@/components/ui/card';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
+import { usePhotoSource } from '@/components/ui/photo-source-sheet';
 import { Screen } from '@/components/ui/screen';
 import { Chore, listOpenChores, uploadProofPhoto } from '@/lib/api';
-import { pickImages } from '@/lib/pick-images';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
 // Kid chore detail: see the how-to, add a photo showing it's done, and send it. A grown-up
@@ -26,6 +26,7 @@ export default function KidChoreDetail() {
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const { choose, sheet } = usePhotoSource();
 
   const load = useCallback(async () => {
     setError(null);
@@ -48,7 +49,7 @@ export default function KidChoreDetail() {
   );
 
   async function addPhoto() {
-    const uris = await pickImages(false);
+    const uris = await choose(false);
     if (uris[0]) setPicked(uris[0]);
   }
 
@@ -68,6 +69,7 @@ export default function KidChoreDetail() {
 
   return (
     <Screen>
+      {sheet}
       <Pressable
         onPress={() => router.back()}
         hitSlop={8}
