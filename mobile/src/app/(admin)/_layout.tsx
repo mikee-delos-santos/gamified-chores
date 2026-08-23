@@ -1,8 +1,8 @@
 import { Redirect, Stack, useSegments } from 'expo-router';
-import { ActivityIndicator, StyleSheet } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
-import { ThemedView } from '@/components/themed-view';
 import { useSession } from '@/lib/session';
+import { Color } from '@/theme/tokens';
 
 // Guards the admin group. While the boot-time token check runs we show a spinner so the
 // login screen never flashes for an already-signed-in admin. A signed-out admin is
@@ -14,9 +14,9 @@ export default function AdminLayout() {
 
   if (status === 'loading') {
     return (
-      <ThemedView style={styles.center}>
-        <ActivityIndicator />
-      </ThemedView>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Color.appBg }}>
+        <ActivityIndicator color={Color.primary} />
+      </View>
     );
   }
 
@@ -26,7 +26,3 @@ export default function AdminLayout() {
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-});
