@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_140001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_150001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -48,6 +48,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_140001) do
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_child_profiles_on_family_id"
+  end
+
+  create_table "chore_templates", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id", null: false
+    t.text "description"
+    t.bigint "family_id", null: false
+    t.decimal "reward_coins", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chore_templates_on_created_by_id"
+    t.index ["family_id"], name: "index_chore_templates_on_family_id"
   end
 
   create_table "chores", force: :cascade do |t|
@@ -111,6 +123,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_140001) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "child_profiles", "families"
+  add_foreign_key "chore_templates", "families"
+  add_foreign_key "chore_templates", "users", column: "created_by_id"
   add_foreign_key "chores", "child_profiles", column: "completed_by_id"
   add_foreign_key "chores", "families"
   add_foreign_key "chores", "users", column: "created_by_id"

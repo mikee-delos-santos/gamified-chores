@@ -11,7 +11,7 @@ class Chore < ApplicationRecord
   has_many_attached :how_to_photos
   has_one_attached :proof_photo
 
-  enum :status, { open: 0, completed: 1, rejected: 2 }, default: :open
+  enum :status, { open: 0, completed: 1, rejected: 2, expired: 3 }, default: :open
 
   validates :title, presence: true
   # Decimal so grading can award a fraction of the reward (PC-34).

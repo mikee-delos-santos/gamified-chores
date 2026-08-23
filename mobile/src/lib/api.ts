@@ -53,7 +53,7 @@ export interface Admin {
   role: Role;
 }
 
-export type ChoreStatus = 'open' | 'completed' | 'rejected';
+export type ChoreStatus = 'open' | 'completed' | 'rejected' | 'expired';
 
 export interface Chore {
   id: number;
@@ -67,6 +67,15 @@ export interface Chore {
   completed_at: string | null;
   how_to_photo_urls: string[];
   proof_photo_url: string | null;
+}
+
+/** A reusable chore an admin posts on demand. No completion state. */
+export interface ChoreTemplate {
+  id: number;
+  title: string;
+  description: string | null;
+  reward_coins: number;
+  how_to_photo_urls: string[];
 }
 
 /** A chore plus the award/balance that completing it produced. */
@@ -164,6 +173,60 @@ export async function deleteChore(token: string, id: number): Promise<void> {
   await apiFetch(`/chores/${id}`, { method: 'DELETE', headers: authHeaders(token) });
 }
 
+// --- Chore templates (recurring chores; admin, Bearer token) ---
+
+export async function listChoreTemplates(token: string): Promise<ChoreTemplate[]> {
+  const res = await apiFetch('/chore_templates', { headers: authHeaders(token) });
+  return json<ChoreTemplate[]>(res);
+}
+
+export async function createChoreTemplate(
+  token: string,
+  input: CreateChoreInput,
+): Promise<ChoreTemplate> {
+  const res = await apiFetch('/chore_templates', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(input),
+  });
+  return json<ChoreTemplate>(res);
+}
+
+export async function updateChoreTemplate(
+  token: string,
+  id: number,
+  input: CreateChoreInput,
+): Promise<ChoreTemplate> {
+  const res = await apiFetch(`/chore_templates/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(input),
+  });
+  return json<ChoreTemplate>(res);
+}
+
+export async function deleteChoreTemplate(token: string, id: number): Promise<void> {
+  await apiFetch(`/chore_templates/${id}`, { method: 'DELETE', headers: authHeaders(token) });
+}
+
+/** Spawn a fresh open chore from a template. Returns the new chore. */
+export async function postChoreTemplate(token: string, id: number): Promise<Chore> {
+  const res = await apiFetch(`/chore_templates/${id}/post_chore`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return json<Chore>(res);
+}
+
+/** Retire a live open chore that no longer applies. Returns the expired chore. */
+export async function expireChore(token: string, id: number): Promise<Chore> {
+  const res = await apiFetch(`/chores/${id}/expire`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return json<Chore>(res);
+}
+
 // --- Photo uploads (multipart) ---
 // Turn local image URIs (from expo-image-picker) into a multipart body. On web a URI is a
 // blob: URL we fetch back into a Blob; on native, RN's FormData accepts a {uri,name,type} file.
@@ -190,6 +253,21 @@ export async function uploadHowToPhotos(token: string, id: number, uris: string[
   });
   if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
   return json<Chore>(res);
+}
+
+/** Attach how-to photos to a template (multipart PATCH). */
+export async function uploadTemplateHowToPhotos(
+  token: string,
+  id: number,
+  uris: string[],
+): Promise<ChoreTemplate> {
+  const res = await fetch(`${API_URL}/chore_templates/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(token), // no Content-Type: runtime sets the multipart boundary
+    body: await imageFormData('how_to_photos[]', uris),
+  });
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
+  return json<ChoreTemplate>(res);
 }
 
 /** Attach a kid's proof photo to a chore (multipart POST, unauthenticated). `by` is the kid's

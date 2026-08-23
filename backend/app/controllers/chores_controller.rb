@@ -90,6 +90,19 @@ class ChoresController < ApplicationController
     render json: chore_json(chore).merge(awarded: award.to_f, child_balance: child.balance.to_f)
   end
 
+  # POST /chores/:id/expire — retire a live chore that no longer applies.
+  # Distinct from reject ("kid did it wrong"); only open chores can expire.
+  def expire
+    chore = current_family.chores.find(params[:id])
+    unless chore.open?
+      return render json: { error: "chore is not open (already #{chore.status})" },
+                    status: :unprocessable_entity
+    end
+
+    chore.update!(status: :expired)
+    render json: chore_json(chore)
+  end
+
   private
 
   def chore_params

@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Check, Pencil, Star, Trash2, Users } from 'lucide-react-native';
+import { Ban, Check, Pencil, Star, Trash2, Users } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, View } from 'react-native';
 
@@ -17,13 +17,20 @@ import { TextField } from '@/components/ui/text-field';
 import {
   ChildProfile,
   Chore,
+  ChoreTemplate,
   completeChore,
   createChore,
+  createChoreTemplate,
   deleteChore,
+  deleteChoreTemplate,
+  expireChore,
   listChildProfiles,
   listChores,
+  listChoreTemplates,
+  postChoreTemplate,
   updateChore,
   uploadHowToPhotos,
+  uploadTemplateHowToPhotos,
 } from '@/lib/api';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
@@ -39,6 +46,7 @@ export default function AdminChores() {
   const router = useRouter();
 
   const [chores, setChores] = useState<Chore[]>([]);
+  const [templates, setTemplates] = useState<ChoreTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +56,7 @@ export default function AdminChores() {
   const [reward, setReward] = useState('');
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [recurring, setRecurring] = useState(false);
 
   // Award sheet + edit sheet
   const [target, setTarget] = useState<Chore | null>(null);
@@ -59,7 +68,12 @@ export default function AdminChores() {
     if (!token) return;
     setError(null);
     try {
-      setChores(await listChores(token));
+      const [choreList, templateList] = await Promise.all([
+        listChores(token),
+        listChoreTemplates(token),
+      ]);
+      setChores(choreList);
+      setTemplates(templateList);
     } catch {
       setError('Could not load chores.');
     } finally {
@@ -83,21 +97,30 @@ export default function AdminChores() {
     setCreating(true);
     setError(null);
     try {
-      const chore = await createChore(token, {
+      const input = {
         title: title.trim(),
         description: description.trim() || undefined,
         reward_coins: coins,
-      });
-      if (newPhotos.length) {
-        await uploadHowToPhotos(token, chore.id, newPhotos);
+      };
+      if (recurring) {
+        const template = await createChoreTemplate(token, input);
+        if (newPhotos.length) {
+          await uploadTemplateHowToPhotos(token, template.id, newPhotos);
+        }
+      } else {
+        const chore = await createChore(token, input);
+        if (newPhotos.length) {
+          await uploadHowToPhotos(token, chore.id, newPhotos);
+        }
       }
       setTitle('');
       setDescription('');
       setReward('');
       setNewPhotos([]);
+      setRecurring(false);
       await load();
     } catch {
-      setError('Could not create the chore.');
+      setError(recurring ? 'Could not create the template.' : 'Could not create the chore.');
     } finally {
       setCreating(false);
     }
@@ -172,6 +195,27 @@ export default function AdminChores() {
                 label={newPhotos.length ? `How-to photos (${newPhotos.length})` : 'Add how-to photos'}
                 onPress={addNewPhotos}
               />
+              <Pressable
+                onPress={() => setRecurring((v) => !v)}
+                hitSlop={6}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    borderColor: recurring ? Color.primary : Color.dashed,
+                    backgroundColor: recurring ? Color.primary : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  {recurring ? <Check size={14} color={Color.white} strokeWidth={3} /> : null}
+                </View>
+                <AppText size={14} weight={700} color={Color.navy}>
+                  Make this recurring
+                </AppText>
+              </Pressable>
               {creating ? (
                 <View
                   style={{
@@ -185,13 +229,26 @@ export default function AdminChores() {
                   <ActivityIndicator color={Color.white} />
                 </View>
               ) : (
-                <PrimaryButton label="Add chore" onPress={onCreate} />
+                <PrimaryButton label={recurring ? 'Save recurring chore' : 'Add chore'} onPress={onCreate} />
               )}
             </Card>
 
             <View style={{ marginBottom: 18 }}>
               <NotificationsCard adminToken={token} />
             </View>
+
+            {templates.length > 0 ? (
+              <View style={{ marginBottom: 18 }}>
+                <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
+                  Recurring
+                </AppText>
+                <View style={{ gap: 10 }}>
+                  {templates.map((t) => (
+                    <TemplateRow key={t.id} template={t} token={token} onChanged={load} />
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             {error ? (
               <AppText size={13} weight={700} color="#c8452f" style={{ marginBottom: 10 }}>
@@ -294,6 +351,17 @@ function ChoreRow({
     }
   }
 
+  async function onExpire() {
+    if (!token) return;
+    setBusy(true);
+    try {
+      await expireChore(token, chore.id);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Card style={{ padding: 14, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -358,6 +426,108 @@ function ChoreRow({
             Edit
           </AppText>
         </Pressable>
+        {!done ? (
+          <Pressable
+            onPress={onExpire}
+            disabled={busy}
+            hitSlop={6}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Ban size={14} color={Ink.t55} strokeWidth={2.4} />
+            <AppText size={13} weight={800} color={Ink.t55}>
+              Expire
+            </AppText>
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={onDelete}
+          disabled={busy}
+          hitSlop={6}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Trash2 size={14} color="#c8452f" strokeWidth={2.4} />
+          <AppText size={13} weight={800} color="#c8452f">
+            {confirmDelete ? 'Tap to confirm' : 'Delete'}
+          </AppText>
+        </Pressable>
+      </View>
+    </Card>
+  );
+}
+
+function TemplateRow({
+  template,
+  token,
+  onChanged,
+}: {
+  template: ChoreTemplate;
+  token: string | null;
+  onChanged: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function onPost() {
+    if (!token) return;
+    setBusy(true);
+    try {
+      await postChoreTemplate(token, template.id);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!token) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      await deleteChoreTemplate(token, template.id);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 14, gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <AppText size={16} weight={800} color={Color.navy}>
+            {template.title}
+          </AppText>
+          {template.description ? (
+            <AppText size={12} weight={600} color={Ink.t55}>
+              {template.description}
+            </AppText>
+          ) : null}
+        </View>
+        <CoinChip amount={template.reward_coins} />
+      </View>
+
+      {template.how_to_photo_urls.length > 0 ? (
+        <PhotoThumbs urls={template.how_to_photo_urls} size={48} />
+      ) : null}
+
+      {busy ? (
+        <View
+          style={{
+            backgroundColor: Color.primary,
+            borderRadius: Radius.card,
+            paddingVertical: 17,
+            alignItems: 'center',
+            borderBottomWidth: 6,
+            borderBottomColor: Color.primaryPress,
+          }}>
+          <ActivityIndicator color={Color.white} />
+        </View>
+      ) : (
+        <PrimaryButton label="Post this chore" onPress={onPost} />
+      )}
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         <Pressable
           onPress={onDelete}
           disabled={busy}

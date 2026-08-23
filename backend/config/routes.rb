@@ -17,7 +17,13 @@ Rails.application.routes.draw do
     member do
       post :complete
       post :proof # kid-facing photo proof upload
+      post :expire
     end
+  end
+
+  # Recurring chore templates (admin-only). post_chore spawns a fresh open chore.
+  resources :chore_templates, only: [:index, :create, :update, :destroy] do
+    member { post :post_chore }
   end
 
   # Kid-facing list of open chores (unauthenticated).

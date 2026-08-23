@@ -9,6 +9,11 @@ class User < ApplicationRecord
            foreign_key: :created_by_id,
            inverse_of: :created_by,
            dependent: :nullify
+  has_many :created_chore_templates,
+           class_name: "ChoreTemplate",
+           foreign_key: :created_by_id,
+           inverse_of: :created_by,
+           dependent: :nullify
 
   enum :role, { admin: 0 }, default: :admin
 
