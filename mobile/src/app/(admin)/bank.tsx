@@ -1,7 +1,15 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
@@ -11,13 +19,15 @@ import { TextField } from '@/components/ui/text-field';
 import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import {
   CashOutRequest,
+  ChildProfile,
   approveCashOut,
   denyCashOut,
   getFamilySettings,
   listCashOutRequests,
+  listChildProfiles,
   updateFamilySettings,
 } from '@/lib/api';
-import { fmtCoins } from '@/lib/format';
+import { fmtCoins, fmtPeso } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
@@ -30,6 +40,8 @@ export default function AdminBank() {
   const router = useRouter();
 
   const [rate, setRate] = useState('');
+  const [pesoPerCoin, setPesoPerCoin] = useState(0);
+  const [children, setChildren] = useState<ChildProfile[]>([]);
   const [requests, setRequests] = useState<CashOutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,11 +55,14 @@ export default function AdminBank() {
     if (!token) return;
     setError(null);
     try {
-      const [settings, pending] = await Promise.all([
+      const [settings, kids, pending] = await Promise.all([
         getFamilySettings(token),
+        listChildProfiles(),
         listCashOutRequests(token, 'pending'),
       ]);
       setRate(String(settings.peso_per_coin));
+      setPesoPerCoin(settings.peso_per_coin);
+      setChildren([...kids].sort((a, b) => b.balance - a.balance));
       setRequests(pending);
     } catch {
       setError('Could not load the coin bank.');
@@ -86,6 +101,7 @@ export default function AdminBank() {
     try {
       const saved = await updateFamilySettings(token, value);
       setRate(String(saved.peso_per_coin));
+      setPesoPerCoin(saved.peso_per_coin);
       setRateMsg('Saved.');
     } catch {
       setRateMsg('Could not save the rate.');
@@ -142,6 +158,45 @@ export default function AdminBank() {
                 </AppText>
               </Pressable>
             </View>
+
+            <Card style={{ padding: 16, marginBottom: 18, gap: 12 }}>
+              <AppText size={16} weight={800} color={Color.navy}>
+                Kids’ balances
+              </AppText>
+              {children.length === 0 ? (
+                <AppText size={12} weight={700} color={Ink.t55}>
+                  No kids yet.
+                </AppText>
+              ) : (
+                children.map((child, i) => (
+                  <View
+                    key={child.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingTop: i === 0 ? 0 : 10,
+                      borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
+                      borderTopColor: Color.keyPress,
+                    }}>
+                    <AppText size={15} weight={800} color={Color.navy}>
+                      {child.name}
+                    </AppText>
+                    <View
+                      style={{
+                        backgroundColor: Color.coinChip,
+                        borderRadius: Radius.chip,
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                      }}>
+                      <AppText size={14} weight={800} color={Color.navy} tabular>
+                        {fmtCoins(child.balance)} coins · {fmtPeso(child.balance, pesoPerCoin)}
+                      </AppText>
+                    </View>
+                  </View>
+                ))
+              )}
+            </Card>
 
             <Card style={{ gap: 10, padding: 16, marginBottom: 18 }}>
               <AppText size={16} weight={800} color={Color.navy}>
