@@ -21,7 +21,7 @@ class ChoresController < ApplicationController
     chore.created_by = current_user
     chore.save!
     chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
-    PushNotifier.notify_family(current_family, title: "New chore", body: chore.title, url: "/")
+    PushNotifier.notify_family(current_family, title: "New chore", body: chore.title, url: "/?chore=#{chore.id}")
     render json: chore_json(chore), status: :created
   end
 
@@ -43,7 +43,7 @@ class ChoresController < ApplicationController
       chore.family,
       title: "Ready to check",
       body: "#{who} finished #{chore.title}",
-      url: "/",
+      url: "/?chore=#{chore.id}",
     )
     render json: chore_json(chore)
   end
@@ -84,7 +84,7 @@ class ChoresController < ApplicationController
       current_family,
       title: "Nice work, #{child.name}!",
       body: "#{award.to_f} coins for #{chore.title}",
-      url: "/",
+      url: "/?chore=#{chore.id}",
     )
 
     render json: chore_json(chore).merge(awarded: award.to_f, child_balance: child.balance.to_f)

@@ -47,6 +47,12 @@ export default function KidChoreDetail() {
     }, [load]),
   );
 
+  // When deep-linked from a notification there's no history to pop, so fall back to home.
+  function goBack() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }
+
   async function addPhoto() {
     const uris = await pickImages(false);
     if (uris[0]) setPicked(uris[0]);
@@ -69,7 +75,7 @@ export default function KidChoreDetail() {
   return (
     <Screen>
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => goBack()}
         hitSlop={8}
         style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
         <ChevronLeft size={22} color={Color.primary} strokeWidth={2.6} />
@@ -85,7 +91,7 @@ export default function KidChoreDetail() {
           <AppText size={15} weight={700} color={Color.ink}>
             {error ?? 'This chore is not available.'}
           </AppText>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <AppText size={14} weight={800} color={Color.primary}>
               Back
             </AppText>
@@ -130,7 +136,7 @@ export default function KidChoreDetail() {
                 <AppText size={13} weight={700} color={Ink.t60}>
                   Sent as {kidName}. Coins land when a grown-up says nice work.
                 </AppText>
-                <SecondaryButton label="Back to chores" onPress={() => router.back()} />
+                <SecondaryButton label="Back to chores" onPress={() => goBack()} />
               </Card>
             ) : (
               <View style={{ gap: 10 }}>

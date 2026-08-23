@@ -1,4 +1,4 @@
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
@@ -17,6 +17,8 @@ import { Color } from '@/theme/tokens';
 export default function RoleGate() {
   const router = useRouter();
   const { status } = useSession();
+  // `chore` arrives from a notification tap (url "/?chore=<id>") so we can deep-link into it.
+  const { chore } = useLocalSearchParams<{ chore?: string }>();
   const [bound, setBound] = useState<BoundKid | null>(null);
   const [checkedBound, setCheckedBound] = useState(false);
 
@@ -29,7 +31,13 @@ export default function RoleGate() {
 
   if (status === 'loading' || !checkedBound) return null; // brief; avoids flashing the gate
   if (status === 'signedIn') return <Redirect href="/(admin)/chores" />;
-  if (bound) return <Redirect href={`/(kid)/${bound.id}`} />;
+  if (bound) {
+    // A chore notification on the kid's device deep-links to that chore; otherwise their home.
+    if (chore) {
+      return <Redirect href={`/(kid)/chore/${chore}?name=${encodeURIComponent(bound.name)}`} />;
+    }
+    return <Redirect href={`/(kid)/${bound.id}`} />;
+  }
 
   return (
     <Screen>
