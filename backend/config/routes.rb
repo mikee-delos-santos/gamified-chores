@@ -14,7 +14,10 @@ Rails.application.routes.draw do
 
   # Chores (admin-only)
   resources :chores, only: [:index, :create, :update, :destroy] do
-    member { post :complete }
+    member do
+      post :complete
+      post :proof # kid-facing photo proof upload
+    end
   end
 
   # Child profiles: index/show are kid-facing (unauthenticated); create/update/destroy are
