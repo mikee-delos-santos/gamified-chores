@@ -143,6 +143,23 @@ export async function createChore(token: string, input: CreateChoreInput): Promi
   return json<Chore>(res);
 }
 
+export async function updateChore(
+  token: string,
+  id: number,
+  input: CreateChoreInput,
+): Promise<Chore> {
+  const res = await apiFetch(`/chores/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(input),
+  });
+  return json<Chore>(res);
+}
+
+export async function deleteChore(token: string, id: number): Promise<void> {
+  await apiFetch(`/chores/${id}`, { method: 'DELETE', headers: authHeaders(token) });
+}
+
 export interface CompleteChoreInput {
   child_profile_id: number;
   grade: number;
@@ -171,6 +188,34 @@ export async function listChildProfiles(): Promise<ChildProfile[]> {
 export async function getChildProfile(id: number): Promise<ChildProfileDetail> {
   const res = await apiFetch(`/child_profiles/${id}`);
   return json<ChildProfileDetail>(res);
+}
+
+// --- Child profile management (admin) ---
+
+export async function createChildProfile(token: string, name: string): Promise<ChildProfile> {
+  const res = await apiFetch('/child_profiles', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ name }),
+  });
+  return json<ChildProfile>(res);
+}
+
+export async function renameChildProfile(
+  token: string,
+  id: number,
+  name: string,
+): Promise<ChildProfile> {
+  const res = await apiFetch(`/child_profiles/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ name }),
+  });
+  return json<ChildProfile>(res);
+}
+
+export async function deleteChildProfile(token: string, id: number): Promise<void> {
+  await apiFetch(`/child_profiles/${id}`, { method: 'DELETE', headers: authHeaders(token) });
 }
 
 // --- Super admin (admin, destructive) ---

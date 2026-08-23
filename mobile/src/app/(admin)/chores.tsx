@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Check, Star } from 'lucide-react-native';
+import { Check, Pencil, Star, Trash2, Users } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, View } from 'react-native';
 
@@ -17,8 +17,10 @@ import {
   Chore,
   completeChore,
   createChore,
+  deleteChore,
   listChildProfiles,
   listChores,
+  updateChore,
 } from '@/lib/api';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
@@ -43,8 +45,9 @@ export default function AdminChores() {
   const [reward, setReward] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Award sheet
+  // Award sheet + edit sheet
   const [target, setTarget] = useState<Chore | null>(null);
+  const [editTarget, setEditTarget] = useState<Chore | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -109,16 +112,27 @@ export default function AdminChores() {
               <AppText size={24} weight={800} color={Color.navy}>
                 Chores
               </AppText>
-              <Pressable
-                hitSlop={8}
-                onPress={async () => {
-                  await signOut();
-                  router.replace('/');
-                }}>
-                <AppText size={14} weight={800} color={Ink.t55}>
-                  Sign out
-                </AppText>
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => router.push('/(admin)/kids')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Users size={16} color={Color.primary} strokeWidth={2.4} />
+                  <AppText size={14} weight={800} color={Color.primary}>
+                    Kids
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  hitSlop={8}
+                  onPress={async () => {
+                    await signOut();
+                    router.replace('/');
+                  }}>
+                  <AppText size={14} weight={800} color={Ink.t55}>
+                    Sign out
+                  </AppText>
+                </Pressable>
+              </View>
             </View>
 
             <Card style={{ gap: 10, padding: 16, marginBottom: 18 }}>
@@ -193,7 +207,13 @@ export default function AdminChores() {
         }
         renderItem={({ item, index }) => (
           <Pop delay={index * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
-            <ChoreRow chore={item} onAward={() => setTarget(item)} />
+            <ChoreRow
+              chore={item}
+              token={token}
+              onAward={() => setTarget(item)}
+              onEdit={() => setEditTarget(item)}
+              onChanged={load}
+            />
           </Pop>
         )}
       />
@@ -207,12 +227,52 @@ export default function AdminChores() {
           await load();
         }}
       />
+
+      <EditChoreSheet
+        chore={editTarget}
+        token={token}
+        onClose={() => setEditTarget(null)}
+        onDone={async () => {
+          setEditTarget(null);
+          await load();
+        }}
+      />
     </Screen>
   );
 }
 
-function ChoreRow({ chore, onAward }: { chore: Chore; onAward: () => void }) {
+function ChoreRow({
+  chore,
+  token,
+  onAward,
+  onEdit,
+  onChanged,
+}: {
+  chore: Chore;
+  token: string | null;
+  onAward: () => void;
+  onEdit: () => void;
+  onChanged: () => void;
+}) {
   const done = chore.status !== 'open';
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function onDelete() {
+    if (!token) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      await deleteChore(token, chore.id);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Card style={{ padding: 14, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -258,7 +318,136 @@ function ChoreRow({ chore, onAward }: { chore: Chore; onAward: () => void }) {
       ) : (
         <SecondaryButton label="Award to a kid" onPress={onAward} />
       )}
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <Pressable onPress={onEdit} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Pencil size={14} color={Ink.t55} strokeWidth={2.4} />
+          <AppText size={13} weight={800} color={Ink.t55}>
+            Edit
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={onDelete}
+          disabled={busy}
+          hitSlop={6}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Trash2 size={14} color="#c8452f" strokeWidth={2.4} />
+          <AppText size={13} weight={800} color="#c8452f">
+            {confirmDelete ? 'Tap to confirm' : 'Delete'}
+          </AppText>
+        </Pressable>
+      </View>
     </Card>
+  );
+}
+
+function EditChoreSheet({
+  chore,
+  token,
+  onClose,
+  onDone,
+}: {
+  chore: Chore | null;
+  token: string | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [reward, setReward] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!chore) return;
+      setTitle(chore.title);
+      setDescription(chore.description ?? '');
+      setReward(String(chore.reward_coins));
+      setErr(null);
+    }, [chore]),
+  );
+
+  if (!chore) return null;
+
+  async function save() {
+    if (!token || !chore) return;
+    const coins = Number(reward);
+    if (!title.trim() || Number.isNaN(coins) || coins <= 0) {
+      setErr('Enter a title and a reward above 0.');
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await updateChore(token, chore.id, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        reward_coins: coins,
+      });
+      onDone();
+    } catch {
+      setErr('Could not save. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(18,58,94,0.45)' }}>
+        <View
+          style={{
+            backgroundColor: Color.appBg,
+            borderTopLeftRadius: Radius.sheet,
+            borderTopRightRadius: Radius.sheet,
+            paddingHorizontal: 20,
+            paddingTop: 22,
+            paddingBottom: 28,
+            gap: 12,
+          }}>
+          <AppText size={22} weight={900} color={Color.navy}>
+            Edit chore
+          </AppText>
+          <TextField placeholder="Chore title" value={title} onChangeText={setTitle} />
+          <TextField
+            placeholder="Description (optional)"
+            value={description}
+            onChangeText={setDescription}
+          />
+          <TextField
+            placeholder="Reward coins"
+            keyboardType="numeric"
+            value={reward}
+            onChangeText={setReward}
+          />
+          {err ? (
+            <AppText size={13} weight={700} color="#c8452f">
+              {err}
+            </AppText>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <SecondaryButton label="Cancel" onPress={onClose} style={{ flex: 1 }} />
+            {busy ? (
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: Color.primary,
+                  borderRadius: Radius.card,
+                  paddingVertical: 17,
+                  alignItems: 'center',
+                  borderBottomWidth: 6,
+                  borderBottomColor: Color.primaryPress,
+                }}>
+                <ActivityIndicator color={Color.white} />
+              </View>
+            ) : (
+              <PrimaryButton label="Save" onPress={save} style={{ flex: 1 }} />
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 

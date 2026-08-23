@@ -1,6 +1,8 @@
-# Kid-facing read model: profile picker + a child's balance and completed chores.
-# Intentionally unauthenticated — kids have no login (MVP single-family).
+# Kid-facing read model (index/show, unauthenticated — kids have no login) plus admin-only
+# management (create/update/destroy), scoped to the signed-in admin's family.
 class ChildProfilesController < ApplicationController
+  before_action :authenticate_admin!, only: [:create, :update, :destroy]
+
   def index
     profiles = ChildProfile.order(:id).map do |child|
       { id: child.id, name: child.name, balance: child.balance.to_f }
@@ -16,6 +18,26 @@ class ChildProfilesController < ApplicationController
       balance: child.balance.to_f,
       completed_chores: completed_chores_json(child)
     }
+  end
+
+  # POST /child_profiles { name } — admin adds a kid to their family.
+  def create
+    child = current_family.child_profiles.create!(name: params.require(:name))
+    render json: { id: child.id, name: child.name, balance: child.balance.to_f }, status: :created
+  end
+
+  # PATCH /child_profiles/:id { name } — admin renames a kid.
+  def update
+    child = current_family.child_profiles.find(params[:id])
+    child.update!(name: params.require(:name))
+    render json: { id: child.id, name: child.name, balance: child.balance.to_f }
+  end
+
+  # DELETE /child_profiles/:id — admin removes a kid (and their ledger).
+  def destroy
+    child = current_family.child_profiles.find(params[:id])
+    child.destroy
+    render json: { ok: true }
   end
 
   private
