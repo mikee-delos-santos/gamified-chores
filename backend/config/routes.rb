@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     member do
       post :complete
       post :proof # kid-facing photo proof upload
+      post :expire
     end
   end
 
