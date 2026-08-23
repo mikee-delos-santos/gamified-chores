@@ -5,7 +5,7 @@
 // a new deploy is served as soon as it is reachable (no stale code). skipWaiting + clients.claim
 // make a new worker take control on the next load.
 
-const CACHE = 'faye-coins-shell-v2';
+const CACHE = 'faye-coins-shell-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
