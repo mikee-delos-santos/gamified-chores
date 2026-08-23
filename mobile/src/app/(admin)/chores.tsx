@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Ban, Check, Pencil, Star, Trash2, Users } from 'lucide-react-native';
+import { Ban, Check, Pencil, PiggyBank, Star, Trash2, Users } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, View } from 'react-native';
 
@@ -152,6 +152,15 @@ export default function AdminChores() {
                 Chores
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => router.push('/(admin)/bank')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <PiggyBank size={16} color={Color.primary} strokeWidth={2.4} />
+                  <AppText size={14} weight={800} color={Color.primary}>
+                    Bank
+                  </AppText>
+                </Pressable>
                 <Pressable
                   hitSlop={8}
                   onPress={() => router.push('/(admin)/kids')}

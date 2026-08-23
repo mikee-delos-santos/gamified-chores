@@ -3,6 +3,7 @@
 class ChildProfile < ApplicationRecord
   belongs_to :family
   has_many :coin_transactions, dependent: :destroy
+  has_many :cash_out_requests, dependent: :destroy
   has_many :completed_chores,
            class_name: "Chore",
            foreign_key: :completed_by_id,

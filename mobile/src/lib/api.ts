@@ -367,6 +367,111 @@ export async function deleteChildProfile(token: string, id: number): Promise<voi
   await apiFetch(`/child_profiles/${id}`, { method: 'DELETE', headers: authHeaders(token) });
 }
 
+// --- Coin bank & peso exchange (Epic C) ---
+
+/** One row of a kid's ledger history, as shown in the Coin bank. */
+export interface CoinBankEntry {
+  id: number;
+  label: string;
+  amount: number;
+  reason: 'chore_reward' | 'cash_out' | 'adjustment';
+  created_at: string;
+}
+
+/** A cash-out the kid has asked for but a grown-up has not yet decided. */
+export interface PendingCashOut {
+  id: number;
+  coins: number;
+  peso_amount: number;
+  created_at: string;
+}
+
+/** The kid-facing Coin bank read model. Peso value appears only here, by design. */
+export interface CoinBank {
+  child_id: number;
+  name: string;
+  balance: number;
+  peso_per_coin: number;
+  peso_value: number;
+  pending_cash_out: PendingCashOut | null;
+  history: CoinBankEntry[];
+}
+
+export type CashOutStatus = 'pending' | 'approved' | 'denied';
+
+/** A cash-out request as the admin sees it (child named, peso snapshotted). */
+export interface CashOutRequest {
+  id: number;
+  child_profile_id: number;
+  child_name: string;
+  coins: number;
+  peso_amount: number;
+  status: CashOutStatus;
+  created_at: string;
+  decided_at: string | null;
+}
+
+/** Kid-facing Coin bank (unauthenticated). */
+export async function getCoinBank(childId: number): Promise<CoinBank> {
+  const res = await apiFetch(`/child_profiles/${childId}/coin_bank`);
+  return json<CoinBank>(res);
+}
+
+/** Kid asks to cash out N coins; a grown-up approves later. Returns the pending request. */
+export async function requestCashOut(childId: number, coins: number): Promise<CashOutRequest> {
+  const res = await apiFetch(`/child_profiles/${childId}/cash_out_requests`, {
+    method: 'POST',
+    body: JSON.stringify({ coins }),
+  });
+  return json<CashOutRequest>(res);
+}
+
+/** Read the family's coin -> peso rate (admin). */
+export async function getFamilySettings(token: string): Promise<{ peso_per_coin: number }> {
+  const res = await apiFetch('/family/settings', { headers: authHeaders(token) });
+  return json<{ peso_per_coin: number }>(res);
+}
+
+/** Set the family's coin -> peso rate (admin). */
+export async function updateFamilySettings(
+  token: string,
+  pesoPerCoin: number,
+): Promise<{ peso_per_coin: number }> {
+  const res = await apiFetch('/family/settings', {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ peso_per_coin: pesoPerCoin }),
+  });
+  return json<{ peso_per_coin: number }>(res);
+}
+
+/** List cash-out requests for the family, pending by default (admin). */
+export async function listCashOutRequests(
+  token: string,
+  status: CashOutStatus = 'pending',
+): Promise<CashOutRequest[]> {
+  const res = await apiFetch(`/cash_out_requests?status=${status}`, { headers: authHeaders(token) });
+  return json<CashOutRequest[]>(res);
+}
+
+/** Approve a cash-out; the backend writes the ledger withdrawal (admin). */
+export async function approveCashOut(token: string, id: number): Promise<CashOutRequest> {
+  const res = await apiFetch(`/cash_out_requests/${id}/approve`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return json<CashOutRequest>(res);
+}
+
+/** Deny a cash-out; nothing is written to the ledger (admin). */
+export async function denyCashOut(token: string, id: number): Promise<CashOutRequest> {
+  const res = await apiFetch(`/cash_out_requests/${id}/deny`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return json<CashOutRequest>(res);
+}
+
 // --- Super admin (admin, destructive) ---
 
 export async function destroyAllChores(token: string): Promise<{ destroyed: number }> {

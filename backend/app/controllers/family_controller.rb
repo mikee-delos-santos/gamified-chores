@@ -2,7 +2,18 @@
 # grown-up PIN. Admins set it; kid devices check status and verify (both unauthenticated, since
 # kids have no login) against the single-family MVP.
 class FamilyController < ApplicationController
-  before_action :authenticate_admin!, only: [:set_pin]
+  before_action :authenticate_admin!, only: [:set_pin, :settings, :update_settings]
+
+  # GET /family/settings  (admin) — read family-level settings (the peso rate).
+  def settings
+    render json: settings_json(current_family)
+  end
+
+  # PATCH /family/settings { peso_per_coin }  (admin) — set the coin -> peso rate.
+  def update_settings
+    current_family.update!(peso_per_coin: params.require(:peso_per_coin))
+    render json: settings_json(current_family)
+  end
 
   # POST /family/pin { pin }  (admin) — set or change the grown-up PIN.
   def set_pin
@@ -24,5 +35,11 @@ class FamilyController < ApplicationController
     family = Family.first
     ok = family&.pin_set? ? family.authenticate_pin(params[:pin].to_s) : false
     render json: { ok: !!ok }
+  end
+
+  private
+
+  def settings_json(family)
+    { peso_per_coin: family.peso_per_coin.to_f }
   end
 end
