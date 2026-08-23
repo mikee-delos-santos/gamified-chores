@@ -15,15 +15,18 @@ on **Android first**, iOS later.
 it done for a child → coins are awarded → the child sees their updated balance and completed
 chores. Android only, crude UI.
 
-**Explicitly deferred** to later epics (schema-friendly, no rework expected): media
-attachments, push notifications, store/withdraw + peso exchange rate, kid-submitted video
-proof, polished UI.
+**Explicitly deferred** to later epics (schema-friendly, no rework expected): photo
+attachments (kid proof + admin how-to), push notifications, store/withdraw + peso exchange
+rate, polished UI. **Video is dropped entirely** (kid proof and parent how-to) so a PWA stays
+viable on iOS; see ADR 0002.
 
 ## Architecture & stack
 
 - **Backend:** Rails 8 API-only + PostgreSQL, deployed on Railway. Serves a JSON API.
-- **Mobile:** Expo (React Native + TypeScript), single codebase, Android APK via EAS Build.
-  One binary with two modes — an **Admin** area and a **Kid** area — chosen at login /
+- **Mobile:** Expo (React Native + TypeScript), single codebase, with **web/PWA as the
+  primary target** (installable from the browser, no store or sideload friction). Native
+  Android/iOS via EAS Build is kept as a later option, not the near-term path (ADR 0002). One
+  codebase with two areas, an **Admin** area and a **Kid** area, chosen at login /
   profile-select.
 - **Data flow:** App ↔ Rails JSON API over HTTPS. Fetch-on-demand; no realtime in the MVP
   (push arrives in a later epic).
@@ -99,6 +102,7 @@ CoinTransaction # the ledger
   scaffold, Apple Developer membership (owner).
 - **PC-2 — MVP Core Loop:** the slice above.
 - **PC-3 — Coin Bank & Peso Exchange:** store/withdraw + admin-controlled PHP rate.
-- **PC-4 — Media Attachments:** admin video/audio on chores; kid video proof.
+- **PC-4 — Media Attachments:** photo proof from kids; photo + text how-to on chores from
+  admins. Video is out of scope (ADR 0002).
 - **PC-5 — Push Notifications:** Expo push on new chore.
 - **PC-6 — UI Polish:** implement the Claude Design mockups.

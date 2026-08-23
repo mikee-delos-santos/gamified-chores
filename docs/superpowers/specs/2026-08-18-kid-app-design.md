@@ -35,13 +35,22 @@ identity-aware kid app:
 3. **Device-bound kid session.** The device stays locked to one kid; the child's name is shown
    wherever an action commits (Chores header pill, "Sent as <name>" by the CTA, award greeting).
 4. **Grown-up PIN.** Switching kid requires a parent PIN sheet, never a free profile swap.
-5. **Photo _or_ video proof** on a chore (the earlier PC-4 scope was video only), plus an
-   admin-attached how-to video on the chore detail.
+5. **Photo proof** on a chore (still image only), plus an admin-attached **photo + text
+   how-to** on the chore detail. Video is dropped from both the kid (proof) and parent
+   (how-to) sides so a PWA stays viable on iOS; see ADR 0002.
 6. **Award moment ("coin delight").** A full-screen celebration after "I did it!" — praise and the
    chore first, the number second, no peso value.
 7. **Coin bank as the only place money appears.** Ready-to-spend vs Saved tiles, store, and
    **cash-out as a request** ("Asked for ₱37.50. Waiting for approval.") against an admin-set peso
    rate. Peso value never appears on Home, chore rows, detail, or the award.
+
+## Target platform
+
+The app ships as a **web/PWA first** (ADR 0002), installed from the browser with no store or
+sideload. Native Expo/EAS builds are parked for later. Two consequences for this design: proof
+and how-to are photos only (video capture/upload is unreliable in an iOS PWA), and iOS push
+plus device-bound session persistence are weaker than native, so treat a dropped kid session
+(storage eviction) as a recoverable re-pair, not an error state.
 
 ## Behavior rules that must survive the port
 
@@ -60,7 +69,7 @@ Home/Chores row → Chore detail. "I did it!" → Award → Chores. Me → Switc
 2. Invite accepted (pairing confirm)
 3. Home (balance card, coin pips, chores today)
 4. Chores (list with status markers + name pill)
-5. Chore detail (how-to video, photo/video proof, "I did it!", already-done state)
+5. Chore detail (photo + text how-to, photo proof, "I did it!", already-done state)
 6. Award (celebration)
 7. Coin bank (Ready/Saved, store, cash-out request, peso rate, history)
 8. Me (stats, notify toggle, switch kid)
@@ -76,7 +85,7 @@ grown-up PIN, invite-link deep-linking, Join, Invite accepted, device-bound sess
 **Maps onto existing epics:**
 - PC-6 UI Polish: kid design system (Nunito/tokens/Lucide), Home, Chores, Chore detail, Award.
 - PC-3 Coin Bank: coin bank screen, admin-set peso rate, cash-out request + admin approval.
-- PC-4 Media: photo/video proof capture, admin how-to video.
+- PC-4 Media: photo proof capture, admin photo + text how-to. Video dropped (ADR 0002).
 - PC-5 Push: "Tell me about new chores" toggle + token registration.
 
 Still to design: the admin (parent) app — chore creation, awarding, cash-out approval, peso rate.
