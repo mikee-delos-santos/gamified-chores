@@ -1,13 +1,14 @@
 // Auth session for the admin area. Holds the JWT + current admin in React context,
-// persists the token in expo-secure-store, and validates it against /me on boot.
+// persists the token via the platform token store (Keychain/Keystore on native,
+// localStorage on web), and validates it against /me on boot.
 //
 // The kid area needs none of this — it is unauthenticated — but the provider wraps the
 // whole app so the boot-time token check runs once and the admin group can guard on it.
 
-import * as SecureStore from 'expo-secure-store';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Admin, ApiError, getMe, login as apiLogin } from './api';
+import { deleteToken, getToken, setToken } from './token-store';
 
 const TOKEN_KEY = 'chore_admin_token';
 
@@ -34,7 +35,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const stored = await SecureStore.getItemAsync(TOKEN_KEY);
+      const stored = await getToken(TOKEN_KEY);
       if (!stored) {
         if (active) setStatus('signedOut');
         return;
@@ -49,7 +50,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         // Stale or invalid token: drop it and sign out. Rethrow anything that is not an
         // auth failure so a transient network error does not silently wipe the session.
         if (err instanceof ApiError && err.status === 401) {
-          await SecureStore.deleteItemAsync(TOKEN_KEY);
+          await deleteToken(TOKEN_KEY);
           if (active) setStatus('signedOut');
         } else if (active) {
           setStatus('signedOut');
@@ -68,13 +69,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user,
       async signIn(email, password) {
         const result = await apiLogin(email, password);
-        await SecureStore.setItemAsync(TOKEN_KEY, result.token);
+        await setToken(TOKEN_KEY, result.token);
         setToken(result.token);
         setUser(result.user);
         setStatus('signedIn');
       },
       async signOut() {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await deleteToken(TOKEN_KEY);
         setToken(null);
         setUser(null);
         setStatus('signedOut');
