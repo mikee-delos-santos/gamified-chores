@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card, CoinChip } from '@/components/ui/card';
+import { DangerZone } from '@/components/ui/danger-zone';
 import { NotificationsCard } from '@/components/ui/notifications-card';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
@@ -185,6 +186,11 @@ export default function AdminChores() {
           )
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ListFooterComponent={
+          <View style={{ marginTop: 24 }}>
+            <DangerZone token={token} onChanged={load} />
+          </View>
+        }
         renderItem={({ item, index }) => (
           <Pop delay={index * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
             <ChoreRow chore={item} onAward={() => setTarget(item)} />

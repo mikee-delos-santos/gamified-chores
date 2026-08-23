@@ -23,4 +23,8 @@ Rails.application.routes.draw do
   # Web Push: subscribe is open (kid devices have no login); test is admin-only.
   post "push/subscribe" => "push#subscribe"
   post "push/test" => "push#test"
+
+  # Super-admin maintenance (admin-only, destructive).
+  post "admin/destroy_chores" => "admin#destroy_chores"
+  post "admin/reset_coins" => "admin#reset_coins"
 end
