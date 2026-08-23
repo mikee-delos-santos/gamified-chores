@@ -7,6 +7,10 @@ class Chore < ApplicationRecord
              optional: true
   has_many :coin_transactions, dependent: :nullify
 
+  # Media (photo-only, ADR 0002): admin how-to images + the kid's proof image.
+  has_many_attached :how_to_photos
+  has_one_attached :proof_photo
+
   enum :status, { open: 0, completed: 1, rejected: 2 }, default: :open
 
   validates :title, presence: true

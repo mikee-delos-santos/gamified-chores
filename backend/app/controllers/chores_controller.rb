@@ -1,6 +1,7 @@
-# Admin-only chores API: create, list, and complete-with-graded-award.
+# Admin chores API (create/list/complete/edit) plus the kid-facing proof upload.
 class ChoresController < ApplicationController
-  before_action :authenticate_admin!
+  # proof is kid-facing (kids have no login); everything else is admin-only.
+  before_action :authenticate_admin!, except: [:proof]
 
   def index
     chores = current_family.chores.order(created_at: :desc)
@@ -12,14 +13,24 @@ class ChoresController < ApplicationController
     chore = current_family.chores.new(chore_params)
     chore.created_by = current_user
     chore.save!
+    chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
     PushNotifier.notify_family(current_family, title: "New chore", body: chore.title, url: "/")
     render json: chore_json(chore), status: :created
   end
 
-  # PATCH /chores/:id { title, description, reward_coins } — edit a chore.
+  # PATCH /chores/:id { title, description, reward_coins, how_to_photos[] } — edit a chore.
   def update
     chore = current_family.chores.find(params[:id])
     chore.update!(chore_params)
+    chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
+    render json: chore_json(chore)
+  end
+
+  # POST /chores/:id/proof { proof_photo } — kid attaches a photo showing the chore is done.
+  # Unauthenticated (kids have no login); the admin sees it when awarding.
+  def proof
+    chore = Chore.find(params[:id])
+    chore.proof_photo.attach(params[:proof_photo]) if params[:proof_photo].present?
     render json: chore_json(chore)
   end
 
@@ -83,7 +94,9 @@ class ChoresController < ApplicationController
       grade: chore.grade,
       created_by: chore.created_by_id,
       completed_by: chore.completed_by_id,
-      completed_at: chore.completed_at
+      completed_at: chore.completed_at,
+      how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
+      proof_photo_url: chore.proof_photo.attached? ? url_for(chore.proof_photo) : nil
     }
   end
 end
