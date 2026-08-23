@@ -1,11 +1,18 @@
-# Admin chores API (create/list/complete/edit) plus the kid-facing proof upload.
+# Admin chores API (create/list/complete/edit) plus the kid-facing open-list + proof upload.
 class ChoresController < ApplicationController
-  # proof is kid-facing (kids have no login); everything else is admin-only.
-  before_action :authenticate_admin!, except: [:proof]
+  # open + proof are kid-facing (kids have no login); everything else is admin-only.
+  before_action :authenticate_admin!, except: [:proof, :open]
 
   def index
     chores = current_family.chores.order(created_at: :desc)
     chores = chores.where(status: params[:status]) if valid_status?(params[:status])
+    render json: chores.map { |chore| chore_json(chore) }
+  end
+
+  # GET /open_chores — kid-facing list of chores still to do (unauthenticated, single-family MVP).
+  def open
+    family = Family.first
+    chores = family ? family.chores.where(status: :open).order(created_at: :desc) : []
     render json: chores.map { |chore| chore_json(chore) }
   end
 

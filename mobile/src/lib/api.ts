@@ -232,6 +232,12 @@ export async function getChildProfile(id: number): Promise<ChildProfileDetail> {
   return json<ChildProfileDetail>(res);
 }
 
+/** Kid-facing list of chores still to do (unauthenticated). */
+export async function listOpenChores(): Promise<Chore[]> {
+  const res = await apiFetch('/open_chores');
+  return json<Chore[]>(res);
+}
+
 // --- Child profile management (admin) ---
 
 export async function createChildProfile(token: string, name: string): Promise<ChildProfile> {
