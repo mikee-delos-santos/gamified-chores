@@ -192,12 +192,12 @@ export async function uploadHowToPhotos(token: string, id: number, uris: string[
   return json<Chore>(res);
 }
 
-/** Attach a kid's proof photo to a chore (multipart POST, unauthenticated). */
-export async function uploadProofPhoto(id: number, uri: string): Promise<Chore> {
-  const res = await fetch(`${API_URL}/chores/${id}/proof`, {
-    method: 'POST',
-    body: await imageFormData('proof_photo', [uri]),
-  });
+/** Attach a kid's proof photo to a chore (multipart POST, unauthenticated). `by` is the kid's
+ * name, used only to personalize the "ready to check" notification. */
+export async function uploadProofPhoto(id: number, uri: string, by?: string): Promise<Chore> {
+  const form = await imageFormData('proof_photo', [uri]);
+  if (by) form.append('by', by);
+  const res = await fetch(`${API_URL}/chores/${id}/proof`, { method: 'POST', body: form });
   if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
   return json<Chore>(res);
 }
