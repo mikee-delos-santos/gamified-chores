@@ -57,7 +57,7 @@ export default function KidChoreDetail() {
     setBusy(true);
     setError(null);
     try {
-      await uploadProofPhoto(choreId, picked);
+      await uploadProofPhoto(choreId, picked, kidName);
       setSent(true);
     } catch {
       setError('Could not send your photo. Try again.');

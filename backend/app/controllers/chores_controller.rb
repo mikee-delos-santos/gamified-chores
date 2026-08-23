@@ -33,18 +33,27 @@ class ChoresController < ApplicationController
     render json: chore_json(chore)
   end
 
-  # POST /chores/:id/proof { proof_photo } — kid attaches a photo showing the chore is done.
+  # POST /chores/:id/proof { proof_photo, by } — kid attaches a photo showing the chore is done.
   # Unauthenticated (kids have no login); the admin sees it when awarding.
   def proof
     chore = Chore.find(params[:id])
     chore.proof_photo.attach(params[:proof_photo]) if params[:proof_photo].present?
+    who = params[:by].presence || "A kid"
+    PushNotifier.notify_family(
+      chore.family,
+      title: "Ready to check",
+      body: "#{who} finished #{chore.title}",
+      url: "/",
+    )
     render json: chore_json(chore)
   end
 
   # DELETE /chores/:id — remove a chore. Its coin_transactions nullify (past earnings kept).
   def destroy
     chore = current_family.chores.find(params[:id])
+    title = chore.title
     chore.destroy
+    PushNotifier.notify_family(current_family, title: "Chore removed", body: title, url: "/")
     render json: { ok: true }
   end
 
