@@ -172,3 +172,15 @@ export async function getChildProfile(id: number): Promise<ChildProfileDetail> {
   const res = await apiFetch(`/child_profiles/${id}`);
   return json<ChildProfileDetail>(res);
 }
+
+// --- Super admin (admin, destructive) ---
+
+export async function destroyAllChores(token: string): Promise<{ destroyed: number }> {
+  const res = await apiFetch('/admin/destroy_chores', { method: 'POST', headers: authHeaders(token) });
+  return json<{ destroyed: number }>(res);
+}
+
+export async function resetAllCoins(token: string): Promise<{ removed_transactions: number }> {
+  const res = await apiFetch('/admin/reset_coins', { method: 'POST', headers: authHeaders(token) });
+  return json<{ removed_transactions: number }>(res);
+}
