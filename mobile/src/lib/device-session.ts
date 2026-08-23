@@ -27,3 +27,21 @@ export async function setBoundKid(kid: BoundKid): Promise<void> {
 export async function clearBoundKid(): Promise<void> {
   await deleteToken(BOUND_KID_KEY);
 }
+
+// The all-time earned coins we last showed this kid. Used to fire the award ("coin delight")
+// moment on the next app open when a grown-up has awarded new coins since. Keyed per kid so
+// switching kids never crosses their totals. Returns null the first time (no baseline yet).
+function seenEarnedKey(kidId: number): string {
+  return `chore_seen_earned_${kidId}`;
+}
+
+export async function getSeenEarned(kidId: number): Promise<number | null> {
+  const raw = await getToken(seenEarnedKey(kidId));
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+export async function setSeenEarned(kidId: number, total: number): Promise<void> {
+  await setToken(seenEarnedKey(kidId), String(total));
+}

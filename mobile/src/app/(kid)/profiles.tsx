@@ -74,7 +74,7 @@ export default function KidProfiles() {
               <Pressable
                 onPress={async () => {
                   await setBoundKid({ id: item.id, name: item.name });
-                  router.replace(`/(kid)/${item.id}`);
+                  router.replace('/(kid)/(tabs)/chores');
                 }}>
                 <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
                   <Avatar name={item.name} size={44} />

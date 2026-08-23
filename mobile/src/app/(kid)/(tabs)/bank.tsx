@@ -1,5 +1,4 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, View } from 'react-native';
 
@@ -11,6 +10,7 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import { CoinBank, CoinBankEntry, getCoinBank, requestCashOut } from '@/lib/api';
+import { getBoundKid } from '@/lib/device-session';
 import { fmtCoins } from '@/lib/format';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
@@ -23,11 +23,10 @@ function whenLabel(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export default function CoinBankScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export default function KidBank() {
   const router = useRouter();
-  const childId = Number(id);
 
+  const [childId, setChildId] = useState<number | null>(null);
   const [bank, setBank] = useState<CoinBank | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,14 +39,20 @@ export default function CoinBankScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      setBank(await getCoinBank(childId));
+      const bound = await getBoundKid();
+      if (!bound) {
+        router.replace('/');
+        return;
+      }
+      setChildId(bound.id);
+      setBank(await getCoinBank(bound.id));
     } catch {
       setError('Could not open the coin bank.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [childId]);
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -67,7 +72,7 @@ export default function CoinBankScreen() {
   useWebPullToRefresh(scrollNode, onRefresh);
 
   async function onCashOut() {
-    if (!bank) return;
+    if (!bank || childId == null) return;
     const coins = Number(amount);
     setHint(null);
     if (!Number.isFinite(coins) || coins <= 0) {
@@ -134,7 +139,7 @@ export default function CoinBankScreen() {
               <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
             ) : null}
 
-            {/* Header: back + title + rate */}
+            {/* Header: title + rate (no back — this is a tab root) */}
             <View
               style={{
                 flexDirection: 'row',
@@ -143,15 +148,9 @@ export default function CoinBankScreen() {
                 paddingTop: 8,
                 paddingBottom: 16,
               }}>
-              <Pressable
-                onPress={() => router.back()}
-                hitSlop={8}
-                style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ChevronLeft size={22} color={Color.primary} strokeWidth={2.6} />
-                <AppText size={24} weight={800} color={Color.navy}>
-                  Coin bank
-                </AppText>
-              </Pressable>
+              <AppText size={24} weight={800} color={Color.navy}>
+                Coin bank
+              </AppText>
               <AppText size={12} weight={700} color={Ink.t55} tabular>
                 1 coin = {fmtPesoAmount(bank.peso_per_coin)}
               </AppText>
