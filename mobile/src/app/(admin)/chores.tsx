@@ -1,7 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ban, Check, Pencil, PiggyBank, Star, Trash2, Users } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Platform, Pressable, RefreshControl, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -14,6 +14,7 @@ import { usePhotoSource } from '@/components/ui/photo-source-sheet';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import {
   ChildProfile,
   Chore,
@@ -48,7 +49,9 @@ export default function AdminChores() {
   const [chores, setChores] = useState<Chore[]>([]);
   const [templates, setTemplates] = useState<ChoreTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
 
   // New-chore form
   const [title, setTitle] = useState('');
@@ -78,6 +81,7 @@ export default function AdminChores() {
       setError('Could not load chores.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [token]);
 
@@ -86,6 +90,17 @@ export default function AdminChores() {
       load();
     }, [load]),
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
+
+  const listRef = useCallback((r: FlatList<Chore> | null) => {
+    setScrollNode((r as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.() ?? null);
+  }, []);
+
+  useWebPullToRefresh(scrollNode, onRefresh);
 
   async function onCreate() {
     if (!token) return;
@@ -135,11 +150,18 @@ export default function AdminChores() {
     <Screen padded={false}>
       {sheet}
       <FlatList<Chore>
+        ref={listRef}
         data={chores}
         keyExtractor={(c) => String(c.id)}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} tintColor={Color.primary} onRefresh={onRefresh} />
+        }
         ListHeaderComponent={
           <View>
+            {Platform.OS === 'web' && refreshing ? (
+              <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
+            ) : null}
             <View
               style={{
                 flexDirection: 'row',

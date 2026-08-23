@@ -1,7 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Check, ChevronLeft, Pencil, Trash2, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import {
   ChildProfile,
   createChildProfile,
@@ -30,9 +31,11 @@ export default function AdminKids() {
 
   const [kids, setKids] = useState<ChildProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -42,6 +45,7 @@ export default function AdminKids() {
       setError('Could not load kids.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -50,6 +54,17 @@ export default function AdminKids() {
       load();
     }, [load]),
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
+
+  const listRef = useCallback((r: FlatList<ChildProfile> | null) => {
+    setScrollNode((r as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.() ?? null);
+  }, []);
+
+  useWebPullToRefresh(scrollNode, onRefresh);
 
   async function onAdd() {
     if (!token || !newName.trim()) return;
@@ -68,11 +83,18 @@ export default function AdminKids() {
   return (
     <Screen padded={false}>
       <FlatList<ChildProfile>
+        ref={listRef}
         data={kids}
         keyExtractor={(k) => String(k.id)}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} tintColor={Color.primary} onRefresh={onRefresh} />
+        }
         ListHeaderComponent={
           <View>
+            {Platform.OS === 'web' && refreshing ? (
+              <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
+            ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 16 }}>
               <Pressable
                 onPress={() => router.replace('/(admin)/chores')}

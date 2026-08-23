@@ -1,13 +1,14 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import {
   CashOutRequest,
   approveCashOut,
@@ -31,10 +32,12 @@ export default function AdminBank() {
   const [rate, setRate] = useState('');
   const [requests, setRequests] = useState<CashOutRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingRate, setSavingRate] = useState(false);
   const [rateMsg, setRateMsg] = useState<string | null>(null);
   const [actingId, setActingId] = useState<number | null>(null);
+  const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -50,6 +53,7 @@ export default function AdminBank() {
       setError('Could not load the coin bank.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [token]);
 
@@ -58,6 +62,17 @@ export default function AdminBank() {
       load();
     }, [load]),
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
+
+  const listRef = useCallback((r: FlatList<CashOutRequest> | null) => {
+    setScrollNode((r as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.() ?? null);
+  }, []);
+
+  useWebPullToRefresh(scrollNode, onRefresh);
 
   async function onSaveRate() {
     if (!token) return;
@@ -104,11 +119,18 @@ export default function AdminBank() {
   return (
     <Screen padded={false}>
       <FlatList<CashOutRequest>
+        ref={listRef}
         data={requests}
         keyExtractor={(r) => String(r.id)}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} tintColor={Color.primary} onRefresh={onRefresh} />
+        }
         ListHeaderComponent={
           <View>
+            {Platform.OS === 'web' && refreshing ? (
+              <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
+            ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 16 }}>
               <Pressable
                 onPress={() => router.replace('/(admin)/chores')}
