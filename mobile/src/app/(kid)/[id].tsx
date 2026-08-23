@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import { NotificationsCard } from '@/components/ui/notifications-card';
 import { PinSheet } from '@/components/ui/pin-sheet';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
+import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import { ChildProfileDetail, Chore, CompletedChore, getChildProfile, getPinStatus, listOpenChores } from '@/lib/api';
 import { clearBoundKid } from '@/lib/device-session';
 import { fmtCoins } from '@/lib/format';
@@ -33,6 +34,8 @@ export default function KidHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPin, setShowPin] = useState(false);
+  // The FlatList's scrollable DOM node, used to power pull-to-refresh on web (see hook below).
+  const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
 
   // Switching kids leaves the device binding — guarded by a grown-up PIN when one is set.
   async function doSwitch() {
@@ -64,6 +67,21 @@ export default function KidHome() {
       load();
     }, [load]),
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
+
+  // Stable ref so React doesn't re-run this (and setScrollNode) on every render.
+  const listRef = useCallback((r: FlatList<CompletedChore> | null) => {
+    setScrollNode(
+      (r as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.() ?? null,
+    );
+  }, []);
+
+  // Restore pull-to-refresh on the PWA, where RefreshControl's gesture does nothing.
+  useWebPullToRefresh(scrollNode, onRefresh);
 
   if (loading) {
     return (
@@ -102,21 +120,18 @@ export default function KidHome() {
   return (
     <Screen padded={false}>
       <FlatList<CompletedChore>
+        ref={listRef}
         data={done}
         keyExtractor={(c) => String(c.id)}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            tintColor={Color.primary}
-            onRefresh={() => {
-              setRefreshing(true);
-              load();
-            }}
-          />
+          <RefreshControl refreshing={refreshing} tintColor={Color.primary} onRefresh={onRefresh} />
         }
         ListHeaderComponent={
           <View>
+            {Platform.OS === 'web' && refreshing ? (
+              <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
+            ) : null}
             <View
               style={{
                 flexDirection: 'row',
