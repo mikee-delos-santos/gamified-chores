@@ -1,24 +1,25 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { ChildProfileDetail, getChildProfile } from '@/lib/api';
-
-function stars(n: number | null): string {
-  if (!n) return '';
-  return '★'.repeat(n) + '☆'.repeat(5 - n);
-}
+import { AppText } from '@/components/ui/app-text';
+import { Avatar } from '@/components/ui/avatar';
+import { BalanceCard } from '@/components/ui/balance-card';
+import { Card, CoinChip } from '@/components/ui/card';
+import { Pop } from '@/components/ui/pop';
+import { Screen } from '@/components/ui/screen';
+import { ChildProfileDetail, CompletedChore, getChildProfile } from '@/lib/api';
+import { fmtCoins } from '@/lib/format';
+import { Color, Ink } from '@/theme/tokens';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleDateString();
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export default function KidBalance() {
+export default function KidHome() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const childId = Number(id);
@@ -48,117 +49,123 @@ export default function KidBalance() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <ActivityIndicator style={styles.loader} />
-      </ThemedView>
+      <Screen>
+        <ActivityIndicator color={Color.primary} style={{ marginTop: 48 }} />
+      </Screen>
     );
   }
 
   if (error || !data) {
     return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.centerScreen}>
-          <ThemedText type="small" style={styles.error}>
+      <Screen>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <AppText size={15} weight={700} color={Color.ink}>
             {error ?? 'Not found.'}
-          </ThemedText>
+          </AppText>
           <Pressable onPress={load}>
-            <ThemedText type="small" style={styles.link}>
-              Retry
-            </ThemedText>
+            <AppText size={15} weight={800} color={Color.primary}>
+              Try again
+            </AppText>
           </Pressable>
-          <Pressable onPress={() => router.replace('/')}>
-            <ThemedText type="small" style={styles.link}>
-              Home
-            </ThemedText>
+          <Pressable onPress={() => router.replace('/(kid)/profiles')}>
+            <AppText size={14} weight={800} color={Ink.t55}>
+              Switch kid
+            </AppText>
           </Pressable>
-        </SafeAreaView>
-      </ThemedView>
+        </View>
+      </Screen>
     );
   }
 
+  const done = data.completed_chores;
+  const totalEarned = done.reduce((sum, c) => sum + (c.awarded ?? 0), 0);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <FlatList
-          data={data.completed_chores}
-          keyExtractor={(c) => String(c.id)}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
-            />
-          }
-          ListHeaderComponent={
-            <View style={styles.head}>
-              <View style={styles.headTop}>
-                <ThemedText type="subtitle">{data.name}</ThemedText>
-                <Pressable onPress={() => router.replace('/')}>
-                  <ThemedText type="small" style={styles.link}>
-                    Home
-                  </ThemedText>
-                </Pressable>
-              </View>
-              <ThemedText style={styles.bigBalance}>{data.balance}</ThemedText>
-              <ThemedText type="small" style={styles.balanceLabel}>
-                Faye Coins
-              </ThemedText>
-              <ThemedText type="default" style={styles.sectionTitle}>
-                Completed chores
-              </ThemedText>
+    <Screen padded={false}>
+      <FlatList<CompletedChore>
+        data={done}
+        keyExtractor={(c) => String(c.id)}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            tintColor={Color.primary}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+          />
+        }
+        ListHeaderComponent={
+          <View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                paddingBottom: 16,
+              }}>
+              <Pressable
+                onPress={() => router.replace('/(kid)/profiles')}
+                hitSlop={8}
+                style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ChevronLeft size={22} color={Color.primary} strokeWidth={2.6} />
+                <AppText size={20} weight={800} color={Color.navy}>
+                  Hi, {data.name}
+                </AppText>
+              </Pressable>
+              <Avatar name={data.name} size={34} />
             </View>
-          }
-          ListEmptyComponent={
-            <ThemedText type="small" style={styles.empty}>
-              No chores done yet.
-            </ThemedText>
-          }
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <ThemedView style={styles.row}>
-              <View style={styles.rowMain}>
-                <ThemedText type="default">{item.title}</ThemedText>
-                <ThemedText type="small" style={styles.muted}>
-                  {stars(item.grade)}  ·  {formatDate(item.completed_at)}
-                </ThemedText>
+
+            <BalanceCard balance={data.balance} />
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: 22,
+                marginBottom: 10,
+              }}>
+              <AppText size={18} weight={800} color={Color.navy}>
+                Chores you finished
+              </AppText>
+              {done.length > 0 ? (
+                <AppText size={13} weight={700} color={Color.primary} tabular>
+                  {fmtCoins(totalEarned)} coins
+                </AppText>
+              ) : null}
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
+            <AppText size={15} weight={800} color={Color.navy}>
+              No chores done yet
+            </AppText>
+            <AppText size={13} weight={700} color={Ink.t55} center style={{ marginTop: 4 }}>
+              Finish a chore and your coins land here.
+            </AppText>
+          </Card>
+        }
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        renderItem={({ item, index }) => (
+          <Pop delay={index * 60} from={0.99} translateY={10} damping={16} stiffness={150}>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText size={16} weight={800} color={Color.navy}>
+                  {item.title}
+                </AppText>
+                <AppText size={12} weight={600} color={Ink.t55}>
+                  {formatDate(item.completed_at)}
+                </AppText>
               </View>
-              <ThemedText type="default" style={styles.awarded}>
-                +{item.awarded}
-              </ThemedText>
-            </ThemedView>
-          )}
-        />
-      </SafeAreaView>
-    </ThemedView>
+              <CoinChip amount={item.awarded} />
+            </Card>
+          </Pop>
+        )}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1 },
-  loader: { marginTop: 48 },
-  centerScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  head: { padding: 16, gap: 2 },
-  headTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bigBalance: { fontSize: 56, fontWeight: '800', lineHeight: 64, marginTop: 8 },
-  balanceLabel: { color: '#b26a00' },
-  sectionTitle: { marginTop: 24 },
-  list: { paddingHorizontal: 16, paddingBottom: 24, gap: 8 },
-  empty: { textAlign: 'center', opacity: 0.7, marginTop: 16 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
-  },
-  rowMain: { flex: 1, gap: 2 },
-  muted: { opacity: 0.7 },
-  awarded: { color: '#1a8a3a' },
-  link: { color: '#3b6cff' },
-  error: { color: '#d33' },
-});

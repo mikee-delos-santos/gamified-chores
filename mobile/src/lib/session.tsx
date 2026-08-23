@@ -8,7 +8,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Admin, ApiError, getMe, login as apiLogin } from './api';
-import { deleteToken, getToken, setToken } from './token-store';
+import { deleteToken as clearStoredToken, getToken as loadStoredToken, setToken as storeToken } from './token-store';
 
 const TOKEN_KEY = 'chore_admin_token';
 
@@ -35,7 +35,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const stored = await getToken(TOKEN_KEY);
+      const stored = await loadStoredToken(TOKEN_KEY);
       if (!stored) {
         if (active) setStatus('signedOut');
         return;
@@ -50,7 +50,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         // Stale or invalid token: drop it and sign out. Rethrow anything that is not an
         // auth failure so a transient network error does not silently wipe the session.
         if (err instanceof ApiError && err.status === 401) {
-          await deleteToken(TOKEN_KEY);
+          await clearStoredToken(TOKEN_KEY);
           if (active) setStatus('signedOut');
         } else if (active) {
           setStatus('signedOut');
@@ -69,13 +69,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user,
       async signIn(email, password) {
         const result = await apiLogin(email, password);
-        await setToken(TOKEN_KEY, result.token);
+        await storeToken(TOKEN_KEY, result.token);
         setToken(result.token);
         setUser(result.user);
         setStatus('signedIn');
       },
       async signOut() {
-        await deleteToken(TOKEN_KEY);
+        await clearStoredToken(TOKEN_KEY);
         setToken(null);
         setUser(null);
         setStatus('signedOut');
