@@ -20,6 +20,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # Recurring chore templates (admin-only). post_chore spawns a fresh open chore.
+  resources :chore_templates, only: [:index, :create, :update, :destroy] do
+    member { post :post_chore }
+  end
+
   # Kid-facing list of open chores (unauthenticated).
   get "open_chores" => "chores#open"
 
