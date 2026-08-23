@@ -41,9 +41,15 @@ upload are the problem.
 - The kid-app design's "photo or video proof" and "how-to video" (see
   `docs/superpowers/specs/2026-08-18-kid-app-design.md`) become photo/text; the prototype in
   `docs/design/kid-app/` still shows video slots and is now ahead of scope on that point.
-- iOS push (PC-5) is still weaker as a PWA than native, and PWA storage can be evicted on iOS
-  after prolonged disuse, which can drop a device-bound kid session and force re-pairing.
-  Accepted for now; revisit if it bites.
+- PC-5 (Push) changes shape: Expo's push service (FCM/APNs) does not work in a PWA, so PC-5
+  becomes standard Web Push (VAPID keys, a `push` + `notificationclick` handler in the service
+  worker, per-device push subscriptions stored on the backend, and the Rails side sending via
+  the web-push protocol). On iOS, Web Push only works for a PWA added to the home screen and
+  opened in standalone mode (iOS 16.4+), never in a Safari tab, and the permission prompt must
+  fire from a user tap. Standalone PWA push is disabled inside the EU; we are not in the EU.
+- iOS push is still weaker as a PWA than native, and PWA storage can be evicted on iOS after
+  prolonged disuse, which can drop a device-bound kid session and force re-pairing. Accepted
+  for now; revisit if it bites.
 - The Apple Developer membership and EAS Android/iOS build work under PC-1 are parked, not
   cancelled.
 - New backend media handling only needs to accept images, not video, for the MVP media epic.
