@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { ChildProfile, listChildProfiles } from '@/lib/api';
+import { setBoundKid } from '@/lib/device-session';
 import { Color, Ink } from '@/theme/tokens';
 
 export default function KidProfiles() {
@@ -70,7 +71,11 @@ export default function KidProfiles() {
           }
           renderItem={({ item, index }) => (
             <Pop delay={index * 60} from={0.99} translateY={10} damping={16} stiffness={150}>
-              <Pressable onPress={() => router.push(`/(kid)/${item.id}`)}>
+              <Pressable
+                onPress={async () => {
+                  await setBoundKid({ id: item.id, name: item.name });
+                  router.replace(`/(kid)/${item.id}`);
+                }}>
                 <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
                   <Avatar name={item.name} size={44} />
                   <AppText size={18} weight={800} color={Color.navy} style={{ flex: 1 }}>

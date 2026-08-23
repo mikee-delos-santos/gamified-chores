@@ -23,6 +23,11 @@ Rails.application.routes.draw do
   # Kid-facing list of open chores (unauthenticated).
   get "open_chores" => "chores#open"
 
+  # Grown-up PIN for device-binding: set is admin-only; status/verify are kid-facing.
+  post "family/pin" => "family#set_pin"
+  get "family/pin_status" => "family#pin_status"
+  post "family/verify_pin" => "family#verify_pin"
+
   # Child profiles: index/show are kid-facing (unauthenticated); create/update/destroy are
   # admin-only (guarded in the controller).
   resources :child_profiles, only: [:index, :show, :create, :update, :destroy]

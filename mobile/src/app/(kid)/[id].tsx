@@ -8,9 +8,11 @@ import { Avatar } from '@/components/ui/avatar';
 import { BalanceCard } from '@/components/ui/balance-card';
 import { Card, CoinChip } from '@/components/ui/card';
 import { NotificationsCard } from '@/components/ui/notifications-card';
+import { PinSheet } from '@/components/ui/pin-sheet';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
-import { ChildProfileDetail, Chore, CompletedChore, getChildProfile, listOpenChores } from '@/lib/api';
+import { ChildProfileDetail, Chore, CompletedChore, getChildProfile, getPinStatus, listOpenChores } from '@/lib/api';
+import { clearBoundKid } from '@/lib/device-session';
 import { fmtCoins } from '@/lib/format';
 import { Color, Ink } from '@/theme/tokens';
 
@@ -30,6 +32,18 @@ export default function KidHome() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPin, setShowPin] = useState(false);
+
+  // Switching kids leaves the device binding — guarded by a grown-up PIN when one is set.
+  async function doSwitch() {
+    await clearBoundKid();
+    router.replace('/');
+  }
+  async function onSwitch() {
+    const hasPin = await getPinStatus().catch(() => false);
+    if (hasPin) setShowPin(true);
+    else await doSwitch();
+  }
 
   const load = useCallback(async () => {
     setError(null);
@@ -71,12 +85,13 @@ export default function KidHome() {
               Try again
             </AppText>
           </Pressable>
-          <Pressable onPress={() => router.replace('/(kid)/profiles')}>
+          <Pressable onPress={onSwitch}>
             <AppText size={14} weight={800} color={Ink.t55}>
               Switch kid
             </AppText>
           </Pressable>
         </View>
+        <PinSheet visible={showPin} onClose={() => setShowPin(false)} onSuccess={doSwitch} />
       </Screen>
     );
   }
@@ -111,7 +126,7 @@ export default function KidHome() {
                 paddingBottom: 16,
               }}>
               <Pressable
-                onPress={() => router.replace('/(kid)/profiles')}
+                onPress={onSwitch}
                 hitSlop={8}
                 style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <ChevronLeft size={22} color={Color.primary} strokeWidth={2.6} />
@@ -206,6 +221,7 @@ export default function KidHome() {
           </Pop>
         )}
       />
+      <PinSheet visible={showPin} onClose={() => setShowPin(false)} onSuccess={doSwitch} />
     </Screen>
   );
 }
