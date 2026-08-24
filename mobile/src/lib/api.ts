@@ -67,6 +67,7 @@ export interface Chore {
   completed_at: string | null;
   how_to_photo_urls: string[];
   proof_photo_url: string | null;
+  proof_by: { id: number; name: string } | null;
 }
 
 /** A reusable chore an admin posts on demand. No completion state. */

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/app-text';
 import { useRefreshOnPush } from '@/hooks/use-refresh-on-push';
-import { useReviewCount } from '@/hooks/use-review-count';
+import { useReviewQueue } from '@/hooks/use-review-queue';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
@@ -28,7 +28,7 @@ type TabBarProps = {
 function AdminTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const { token } = useSession();
-  const reviewCount = useReviewCount(token);
+  const reviewCount = useReviewQueue(token).queue.length;
 
   return (
     <View
