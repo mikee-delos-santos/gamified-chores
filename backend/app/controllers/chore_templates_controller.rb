@@ -83,7 +83,8 @@ class ChoreTemplatesController < ApplicationController
       completed_by: chore.completed_by_id,
       completed_at: chore.completed_at,
       how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
-      proof_photo_url: chore.proof_photo.attached? ? url_for(chore.proof_photo) : nil
+      proof_photo_url: chore.proof_photo.attached? ? url_for(chore.proof_photo) : nil,
+      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name } : nil
     }
   end
 end
