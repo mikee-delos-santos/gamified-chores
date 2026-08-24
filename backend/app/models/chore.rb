@@ -5,6 +5,7 @@ class Chore < ApplicationRecord
              class_name: "ChildProfile",
              inverse_of: :completed_chores,
              optional: true
+  belongs_to :proof_by_child, class_name: "ChildProfile", optional: true
   has_many :coin_transactions, dependent: :nullify
 
   # Media (photo-only, ADR 0002): admin how-to images + the kid's proof image.
