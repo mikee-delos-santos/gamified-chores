@@ -48,8 +48,9 @@ const swScript = `
 // within a 2-second budget. The face is inlined as base64 so it shows before any bundle or
 // network request resolves, which is the whole point - a consistent "loading Faye" screen on
 // every boot, not just the first PWA install. Colors match the manifest (#208AEF).
-const faviconB64 = fs
-  .readFileSync(path.join(__dirname, '..', 'assets', 'images', 'favicon.png'))
+// Uses a dedicated high-res crop (boot-face.jpg) rather than the low-res favicon.
+const faceB64 = fs
+  .readFileSync(path.join(__dirname, '..', 'assets', 'images', 'boot-face.jpg'))
   .toString('base64');
 
 const bootSplash = `
@@ -78,7 +79,7 @@ const bootSplash = `
       }
     </style>
     <div id="faye-boot-splash" role="status" aria-label="Loading Faye Coins">
-      <div class="fbs-face"><img src="data:image/png;base64,${faviconB64}" alt="Faye" /></div>
+      <div class="fbs-face"><img src="data:image/jpeg;base64,${faceB64}" alt="Faye" /></div>
       <div class="fbs-dots"><span></span><span></span><span></span></div>
     </div>
     <script>
