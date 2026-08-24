@@ -398,12 +398,12 @@ function ChoreRow({
 
         {chore.how_to_photo_urls.length > 0 ? <PhotoThumbs urls={chore.how_to_photo_urls} size={48} /> : null}
 
-        {chore.proof_photo_url ? (
+        {chore.proof_photo_urls.length > 0 ? (
           <View style={{ gap: 4 }}>
             <AppText size={12} weight={700} color={Ink.t55}>
               Proof from kid
             </AppText>
-            <PhotoThumbs urls={[chore.proof_photo_url]} size={64} />
+            <PhotoThumbs urls={chore.proof_photo_urls} size={64} />
           </View>
         ) : null}
 

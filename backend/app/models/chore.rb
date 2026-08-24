@@ -8,9 +8,10 @@ class Chore < ApplicationRecord
   belongs_to :proof_by_child, class_name: "ChildProfile", optional: true
   has_many :coin_transactions, dependent: :nullify
 
-  # Media (photo-only, ADR 0002): admin how-to images + the kid's proof image.
+  # Media (photo-only, ADR 0002): admin how-to images + the kid's proof images.
+  # Both are multi-image: a chore can show several how-to shots and collect several proof shots.
   has_many_attached :how_to_photos
-  has_one_attached :proof_photo
+  has_many_attached :proof_photos
 
   enum :status, { open: 0, completed: 1, rejected: 2, expired: 3 }, default: :open
 

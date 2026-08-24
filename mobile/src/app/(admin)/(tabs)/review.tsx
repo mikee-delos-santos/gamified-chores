@@ -114,9 +114,9 @@ function ReviewRow({ chore, onPress }: { chore: Chore; onPress: () => void }) {
         </AppText>
       </View>
       <CoinChip amount={chore.reward_coins} />
-      {chore.proof_photo_url ? (
+      {chore.proof_photo_urls.length > 0 ? (
         <Image
-          source={{ uri: chore.proof_photo_url }}
+          source={{ uri: chore.proof_photo_urls[0] }}
           style={{
             width: 52,
             height: 52,

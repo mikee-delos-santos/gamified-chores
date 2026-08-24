@@ -52,7 +52,7 @@ export default function AdminChoreDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [proofZoom, setProofZoom] = useState(false);
+  const [proofZoom, setProofZoom] = useState<number | null>(null);
   const [grading, setGrading] = useState(false);
   const [grade, setGrade] = useState(5);
   const [busy, setBusy] = useState(false);
@@ -204,22 +204,28 @@ export default function AdminChoreDetail() {
             <AppText size={15} weight={800} color={Color.navy}>
               Their proof
             </AppText>
-            {chore.proof_photo_url ? (
-              <Pressable onPress={() => setProofZoom(true)}>
-                <Image
-                  source={{ uri: chore.proof_photo_url }}
-                  style={{
-                    width: '100%',
-                    height: 260,
-                    borderRadius: Radius.card,
-                    backgroundColor: Color.softBlue,
-                  }}
-                  contentFit="cover"
-                />
-                <AppText size={12} weight={700} color={Ink.t55} style={{ marginTop: 6 }}>
-                  Tap to see it full size
+            {chore.proof_photo_urls.length > 0 ? (
+              <View style={{ gap: 10 }}>
+                {chore.proof_photo_urls.map((url, i) => (
+                  <Pressable key={url} onPress={() => setProofZoom(i)}>
+                    <Image
+                      source={{ uri: url }}
+                      style={{
+                        width: '100%',
+                        height: 260,
+                        borderRadius: Radius.card,
+                        backgroundColor: Color.softBlue,
+                      }}
+                      contentFit="cover"
+                    />
+                  </Pressable>
+                ))}
+                <AppText size={12} weight={700} color={Ink.t55}>
+                  {chore.proof_photo_urls.length > 1
+                    ? 'Tap any photo to see it full size'
+                    : 'Tap to see it full size'}
                 </AppText>
-              </Pressable>
+              </View>
             ) : (
               <AppText size={13} weight={700} color={Ink.t55}>
                 No proof photo yet.
@@ -310,10 +316,10 @@ export default function AdminChoreDetail() {
       )}
 
       <ImageLightbox
-        urls={chore?.proof_photo_url ? [chore.proof_photo_url] : []}
-        index={proofZoom ? 0 : null}
-        onIndexChange={() => {}}
-        onClose={() => setProofZoom(false)}
+        urls={chore?.proof_photo_urls ?? []}
+        index={proofZoom}
+        onIndexChange={setProofZoom}
+        onClose={() => setProofZoom(null)}
       />
     </Screen>
   );

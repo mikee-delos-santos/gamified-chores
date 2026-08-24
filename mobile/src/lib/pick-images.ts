@@ -1,5 +1,5 @@
 // Pick or capture images from the device/browser. Photo-only (ADR 0002). Returns local URIs
-// suitable for upload (see uploadHowToPhotos / uploadProofPhoto in api.ts).
+// suitable for upload (see uploadHowToPhotos / uploadProofPhotos in api.ts).
 //
 // Two sources: the gallery (pickImages) and the camera (capturePhoto). The UI lets the user
 // choose between them via usePhotoSource — see components/ui/photo-source-sheet.tsx.
