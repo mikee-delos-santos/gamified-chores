@@ -7,7 +7,7 @@ import { Chore, listChores } from '@/lib/api';
 // awarded it. Ordered oldest-first by id (ids are monotonic; no created_at in the wire shape).
 function filterQueue(chores: Chore[]): Chore[] {
   return chores
-    .filter((c) => c.status === 'open' && c.proof_photo_url != null)
+    .filter((c) => c.status === 'open' && c.proof_photo_urls.length > 0)
     .sort((a, b) => a.id - b.id);
 }
 

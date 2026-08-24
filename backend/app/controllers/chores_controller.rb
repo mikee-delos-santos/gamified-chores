@@ -33,11 +33,13 @@ class ChoresController < ApplicationController
     render json: chore_json(chore)
   end
 
-  # POST /chores/:id/proof { proof_photo, by } — kid attaches a photo showing the chore is done.
-  # Unauthenticated (kids have no login); the admin sees it when awarding.
+  # POST /chores/:id/proof { proof_photos[], by } — kid attaches photos showing the chore is done.
+  # Photos append (a later submission adds to what's there). Unauthenticated (kids have no login);
+  # the admin sees them when awarding. `proof_photo` (singular) is still accepted for older clients.
   def proof
     chore = Chore.find(params[:id])
-    chore.proof_photo.attach(params[:proof_photo]) if params[:proof_photo].present?
+    incoming = params[:proof_photos].presence || params[:proof_photo].presence
+    chore.proof_photos.attach(incoming) if incoming
     if params[:child_profile_id].present?
       chore.proof_by_child = chore.family.child_profiles.find_by(id: params[:child_profile_id])
     end
@@ -118,6 +120,7 @@ class ChoresController < ApplicationController
   end
 
   def chore_json(chore)
+    proof_urls = chore.proof_photos.attached? ? chore.proof_photos.map { |p| url_for(p) } : []
     {
       id: chore.id,
       title: chore.title,
@@ -129,7 +132,8 @@ class ChoresController < ApplicationController
       completed_by: chore.completed_by_id,
       completed_at: chore.completed_at,
       how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
-      proof_photo_url: chore.proof_photo.attached? ? url_for(chore.proof_photo) : nil,
+      proof_photo_urls: proof_urls,
+      proof_photo_url: proof_urls.first,
       proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name } : nil
     }
   end

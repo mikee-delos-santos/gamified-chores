@@ -66,7 +66,8 @@ export interface Chore {
   completed_by: number | null;
   completed_at: string | null;
   how_to_photo_urls: string[];
-  proof_photo_url: string | null;
+  proof_photo_urls: string[];
+  proof_photo_url: string | null; // first proof photo, kept for older clients
   proof_by: { id: number; name: string } | null;
 }
 
@@ -271,16 +272,17 @@ export async function uploadTemplateHowToPhotos(
   return json<ChoreTemplate>(res);
 }
 
-/** Attach a kid's proof photo to a chore (multipart POST, unauthenticated). `by` is the kid's
- * name, used only to personalize the "ready to check" notification. `childProfileId`, when
- * provided, lets the backend attribute the proof to the correct child profile. */
-export async function uploadProofPhoto(
+/** Attach a kid's proof photos to a chore (multipart POST, unauthenticated). Several photos can
+ * be sent at once; they append to any already there. `by` is the kid's name, used only to
+ * personalize the "ready to check" notification. `childProfileId`, when provided, lets the
+ * backend attribute the proof to the correct child profile. */
+export async function uploadProofPhotos(
   id: number,
-  uri: string,
+  uris: string[],
   by?: string,
   childProfileId?: number,
 ): Promise<Chore> {
-  const form = await imageFormData('proof_photo', [uri]);
+  const form = await imageFormData('proof_photos[]', uris);
   if (by) form.append('by', by);
   if (childProfileId != null) form.append('child_profile_id', String(childProfileId));
   const res = await fetch(`${API_URL}/chores/${id}/proof`, { method: 'POST', body: form });
