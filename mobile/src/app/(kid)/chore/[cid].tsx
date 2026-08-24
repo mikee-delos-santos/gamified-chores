@@ -10,6 +10,7 @@ import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { usePhotoSource } from '@/components/ui/photo-source-sheet';
 import { Screen } from '@/components/ui/screen';
 import { Chore, listOpenChores, uploadProofPhoto } from '@/lib/api';
+import { BoundKid, getBoundKid } from '@/lib/device-session';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
 // Kid chore detail: see the how-to, add a photo showing it's done, and send it. A grown-up
@@ -26,12 +27,14 @@ export default function KidChoreDetail() {
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [boundKid, setBoundKid] = useState<BoundKid | null>(null);
   const { choose, sheet } = usePhotoSource();
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const open = await listOpenChores();
+      const [open, kid] = await Promise.all([listOpenChores(), getBoundKid()]);
+      setBoundKid(kid);
       const found = open.find((c) => c.id === choreId) ?? null;
       setChore(found);
       if (found?.proof_photo_url) setSent(true);
@@ -64,7 +67,7 @@ export default function KidChoreDetail() {
     setBusy(true);
     setError(null);
     try {
-      await uploadProofPhoto(choreId, picked, kidName);
+      await uploadProofPhoto(choreId, picked, kidName, boundKid?.id);
       setSent(true);
     } catch {
       setError('Could not send your photo. Try again.');

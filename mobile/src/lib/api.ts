@@ -271,10 +271,17 @@ export async function uploadTemplateHowToPhotos(
 }
 
 /** Attach a kid's proof photo to a chore (multipart POST, unauthenticated). `by` is the kid's
- * name, used only to personalize the "ready to check" notification. */
-export async function uploadProofPhoto(id: number, uri: string, by?: string): Promise<Chore> {
+ * name, used only to personalize the "ready to check" notification. `childProfileId`, when
+ * provided, lets the backend attribute the proof to the correct child profile. */
+export async function uploadProofPhoto(
+  id: number,
+  uri: string,
+  by?: string,
+  childProfileId?: number,
+): Promise<Chore> {
   const form = await imageFormData('proof_photo', [uri]);
   if (by) form.append('by', by);
+  if (childProfileId != null) form.append('child_profile_id', String(childProfileId));
   const res = await fetch(`${API_URL}/chores/${id}/proof`, { method: 'POST', body: form });
   if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
   return json<Chore>(res);
