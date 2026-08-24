@@ -65,7 +65,7 @@ export default function RoleGate() {
 
         <View style={{ gap: 12, marginTop: 24 }}>
           <PrimaryButton label="I'm a kid" onPress={() => router.push('/(kid)/profiles')} />
-          <SecondaryButton label="I'm a grown-up" onPress={() => router.push('/(admin)/(tabs)/chores')} />
+          <SecondaryButton label="I'm a grown-up" onPress={() => router.push('/(admin)/login')} />
         </View>
       </View>
     </Screen>
