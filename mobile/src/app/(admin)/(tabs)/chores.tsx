@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Ban, Check, Pencil, Star, Trash2 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { Ban, Check, Pencil, Star, Trash2, X } from 'lucide-react-native';
+import { ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -328,6 +328,48 @@ export default function AdminChores() {
   );
 }
 
+// A done-state pill on a chore card: a colored circle icon plus a label. Awarded is green,
+// rejected is red, expired is neutral.
+function StatusBadge({
+  fill,
+  circle,
+  icon,
+  label,
+}: {
+  fill: string;
+  circle: string;
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: fill,
+        borderRadius: Radius.chip,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+      }}>
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: circle,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        {icon}
+      </View>
+      <AppText size={13} weight={800} color={Color.navy}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
 function ChoreRow({
   chore,
   token,
@@ -407,39 +449,34 @@ function ChoreRow({
           </View>
         ) : null}
 
-        {done ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              backgroundColor: Color.softBlue,
-              borderRadius: Radius.chip,
-              paddingVertical: 8,
-              paddingHorizontal: 10,
-            }}>
-            <View
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
-                backgroundColor: Color.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Check size={13} color={Color.white} strokeWidth={3} />
-            </View>
-            <AppText size={13} weight={800} color={Color.navy}>
-              Awarded{chore.grade ? ` · ${chore.grade}/5` : ''}
-            </AppText>
-          </View>
-        ) : (
+        {chore.status === 'open' ? (
           <SecondaryButton
             label="Award to a kid"
             onPress={(e?: GestureResponderEvent) => {
               e?.stopPropagation();
               onAward();
             }}
+          />
+        ) : chore.status === 'completed' ? (
+          <StatusBadge
+            fill={Color.successFill}
+            circle={Color.success}
+            icon={<Check size={13} color={Color.white} strokeWidth={3} />}
+            label={`Awarded${chore.grade ? ` · ${chore.grade}/5` : ''}`}
+          />
+        ) : chore.status === 'rejected' ? (
+          <StatusBadge
+            fill={Color.dangerFill}
+            circle={Color.danger}
+            icon={<X size={13} color={Color.white} strokeWidth={3} />}
+            label="Rejected"
+          />
+        ) : (
+          <StatusBadge
+            fill={Color.softBlue}
+            circle={Color.dashed}
+            icon={<Ban size={12} color={Color.white} strokeWidth={3} />}
+            label="Expired"
           />
         )}
 

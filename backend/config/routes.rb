@@ -18,6 +18,7 @@ Rails.application.routes.draw do
       post :complete
       post :proof # kid-facing photo proof upload
       post :expire
+      post :reject
     end
   end
 

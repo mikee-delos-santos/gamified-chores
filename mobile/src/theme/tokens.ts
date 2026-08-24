@@ -17,6 +17,10 @@ export const Color = {
   coinChip: '#fff6e0',
   dashed: '#9dc4ec', // dashed / next-cell border
   white: '#ffffff',
+  success: '#2fae66', // awarded / positive
+  successFill: '#e4f6ec', // light green badge fill
+  danger: '#c8452f', // reject / destructive
+  dangerFill: '#fbe6e2', // light red badge fill
 } as const;
 
 // Ink tints used for secondary text (rgba over the ink / navy colors).

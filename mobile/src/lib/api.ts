@@ -229,6 +229,16 @@ export async function expireChore(token: string, id: number): Promise<Chore> {
   return json<Chore>(res);
 }
 
+/** Reject a kid's submitted proof as not done. Terminal: no coins are awarded and the chore
+ * cannot be resubmitted. Returns the rejected chore. */
+export async function rejectChore(token: string, id: number): Promise<Chore> {
+  const res = await apiFetch(`/chores/${id}/reject`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return json<Chore>(res);
+}
+
 // --- Photo uploads (multipart) ---
 // Turn local image URIs (from expo-image-picker) into a multipart body. On web a URI is a
 // blob: URL we fetch back into a Blob; on native, RN's FormData accepts a {uri,name,type} file.

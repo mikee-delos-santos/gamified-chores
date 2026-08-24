@@ -11,7 +11,7 @@ import { CoinChip } from '@/components/ui/card';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { Screen } from '@/components/ui/screen';
-import { ChildProfile, Chore, completeChore, listChildProfiles, listChores } from '@/lib/api';
+import { ChildProfile, Chore, completeChore, listChildProfiles, listChores, rejectChore } from '@/lib/api';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -29,7 +29,7 @@ function outcomeLabel(chore: Chore): string {
         ? `Awarded ${chore.grade}/5 · ${fmtCoins(awardFor(chore.grade, chore.reward_coins))} coins`
         : `Awarded · ${fmtCoins(chore.reward_coins)} coins`;
     case 'rejected':
-      return 'Sent back to redo';
+      return 'Rejected';
     case 'expired':
       return 'Expired';
     default:
@@ -57,6 +57,7 @@ export default function AdminChoreDetail() {
   const [grade, setGrade] = useState(5);
   const [busy, setBusy] = useState(false);
   const [awardError, setAwardError] = useState<string | null>(null);
+  const [rejectArmed, setRejectArmed] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -100,6 +101,25 @@ export default function AdminChoreDetail() {
     } catch {
       setAwardError('Could not award it. Try again.');
       setBusy(false);
+    }
+  }
+
+  // Reject is terminal: a two-tap confirm, then mark the chore not-done (no coins).
+  async function reject() {
+    if (!token || !chore) return;
+    if (!rejectArmed) {
+      setRejectArmed(true);
+      return;
+    }
+    setBusy(true);
+    setAwardError(null);
+    try {
+      await rejectChore(token, chore.id);
+      router.replace('/(admin)/(tabs)/review');
+    } catch {
+      setAwardError('Could not reject it. Try again.');
+      setBusy(false);
+      setRejectArmed(false);
     }
   }
 
@@ -296,6 +316,16 @@ export default function AdminChoreDetail() {
                     }
                   }}
                 />
+
+                <Pressable
+                  onPress={reject}
+                  disabled={busy}
+                  hitSlop={6}
+                  style={{ alignItems: 'center', paddingVertical: 6 }}>
+                  <AppText size={14} weight={800} color={Color.danger}>
+                    {rejectArmed ? 'Tap again to reject' : 'Reject (not done)'}
+                  </AppText>
+                </Pressable>
               </View>
             </>
           ) : (

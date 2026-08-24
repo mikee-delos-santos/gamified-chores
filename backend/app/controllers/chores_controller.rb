@@ -109,6 +109,29 @@ class ChoresController < ApplicationController
     render json: chore_json(chore)
   end
 
+  # POST /chores/:id/reject — a parent judges the kid's submitted proof as not done.
+  # Terminal: only an open chore can be rejected, no coins are awarded, and the kid cannot
+  # resubmit (an admin would re-post the chore). Distinct from expire ("no longer applies").
+  def reject
+    chore = current_family.chores.find(params[:id])
+    unless chore.open?
+      return render json: { error: "chore is not open (already #{chore.status})" },
+                    status: :unprocessable_entity
+    end
+
+    chore.update!(status: :rejected)
+
+    who = chore.proof_by_child&.name
+    PushNotifier.notify_family(
+      current_family,
+      title: "Chore not done",
+      body: who ? "#{who}: #{chore.title} was marked not done" : "#{chore.title} was marked not done",
+      url: "/?chore=#{chore.id}",
+    )
+
+    render json: chore_json(chore)
+  end
+
   private
 
   def chore_params
