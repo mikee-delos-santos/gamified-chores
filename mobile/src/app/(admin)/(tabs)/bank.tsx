@@ -1,11 +1,9 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Platform,
-  Pressable,
   RefreshControl,
   StyleSheet,
   View,
@@ -37,7 +35,6 @@ function fmtPesoAmount(peso: number): string {
 
 export default function AdminBank() {
   const { token } = useSession();
-  const router = useRouter();
 
   const [rate, setRate] = useState('');
   const [pesoPerCoin, setPesoPerCoin] = useState(0);
@@ -148,15 +145,9 @@ export default function AdminBank() {
               <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
             ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 16 }}>
-              <Pressable
-                onPress={() => router.replace('/(admin)/chores')}
-                hitSlop={8}
-                style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ChevronLeft size={22} color={Color.primary} strokeWidth={2.6} />
-                <AppText size={24} weight={800} color={Color.navy}>
-                  Coin bank
-                </AppText>
-              </Pressable>
+              <AppText size={24} weight={800} color={Color.navy}>
+                Coin bank
+              </AppText>
             </View>
 
             <Card style={{ padding: 16, marginBottom: 18, gap: 12 }}>
