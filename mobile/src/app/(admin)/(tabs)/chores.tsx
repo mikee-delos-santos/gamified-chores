@@ -1,7 +1,16 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ban, Check, Pencil, Star, Trash2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, RefreshControl, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  GestureResponderEvent,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  View,
+} from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -333,6 +342,7 @@ function ChoreRow({
   onChanged: () => void;
 }) {
   const done = chore.status !== 'open';
+  const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -362,94 +372,121 @@ function ChoreRow({
     }
   }
 
+  // Inner controls stop propagation so their tap doesn't also bubble to the card-open press on web.
+  function stop(e: GestureResponderEvent) {
+    e.stopPropagation();
+  }
+
   return (
-    <Card style={{ padding: 14, gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ flex: 1, gap: 3 }}>
-          <AppText size={16} weight={800} color={Color.navy}>
-            {chore.title}
-          </AppText>
-          {chore.description ? (
-            <AppText size={12} weight={600} color={Ink.t55}>
-              {chore.description}
+    <Pressable
+      onPress={() => router.push({ pathname: '/(admin)/chore/[cid]', params: { cid: chore.id } })}
+      style={({ pressed }) => ({ opacity: pressed ? 0.97 : 1 })}>
+      <Card style={{ padding: 14, gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1, gap: 3 }}>
+            <AppText size={16} weight={800} color={Color.navy}>
+              {chore.title}
             </AppText>
-          ) : null}
+            {chore.description ? (
+              <AppText size={12} weight={600} color={Ink.t55}>
+                {chore.description}
+              </AppText>
+            ) : null}
+          </View>
+          <CoinChip amount={chore.reward_coins} />
         </View>
-        <CoinChip amount={chore.reward_coins} />
-      </View>
 
-      {chore.how_to_photo_urls.length > 0 ? <PhotoThumbs urls={chore.how_to_photo_urls} size={48} /> : null}
+        {chore.how_to_photo_urls.length > 0 ? <PhotoThumbs urls={chore.how_to_photo_urls} size={48} /> : null}
 
-      {chore.proof_photo_url ? (
-        <View style={{ gap: 4 }}>
-          <AppText size={12} weight={700} color={Ink.t55}>
-            Proof from kid
-          </AppText>
-          <PhotoThumbs urls={[chore.proof_photo_url]} size={64} />
-        </View>
-      ) : null}
+        {chore.proof_photo_url ? (
+          <View style={{ gap: 4 }}>
+            <AppText size={12} weight={700} color={Ink.t55}>
+              Proof from kid
+            </AppText>
+            <PhotoThumbs urls={[chore.proof_photo_url]} size={64} />
+          </View>
+        ) : null}
 
-      {done ? (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: Color.softBlue,
-            borderRadius: Radius.chip,
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-          }}>
+        {done ? (
           <View
             style={{
-              width: 20,
-              height: 20,
-              borderRadius: 10,
-              backgroundColor: Color.primary,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: Color.softBlue,
+              borderRadius: Radius.chip,
+              paddingVertical: 8,
+              paddingHorizontal: 10,
             }}>
-            <Check size={13} color={Color.white} strokeWidth={3} />
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: Color.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Check size={13} color={Color.white} strokeWidth={3} />
+            </View>
+            <AppText size={13} weight={800} color={Color.navy}>
+              Awarded{chore.grade ? ` · ${chore.grade}/5` : ''}
+            </AppText>
           </View>
-          <AppText size={13} weight={800} color={Color.navy}>
-            Awarded{chore.grade ? ` · ${chore.grade}/5` : ''}
-          </AppText>
-        </View>
-      ) : (
-        <SecondaryButton label="Award to a kid" onPress={onAward} />
-      )}
+        ) : (
+          <SecondaryButton
+            label="Award to a kid"
+            onPress={(e?: GestureResponderEvent) => {
+              e?.stopPropagation();
+              onAward();
+            }}
+          />
+        )}
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Pressable onPress={onEdit} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Pencil size={14} color={Ink.t55} strokeWidth={2.4} />
-          <AppText size={13} weight={800} color={Ink.t55}>
-            Edit
-          </AppText>
-        </Pressable>
-        {!done ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <Pressable
-            onPress={onExpire}
+            onPress={(e) => {
+              stop(e);
+              onEdit();
+            }}
+            hitSlop={6}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Pencil size={14} color={Ink.t55} strokeWidth={2.4} />
+            <AppText size={13} weight={800} color={Ink.t55}>
+              Edit
+            </AppText>
+          </Pressable>
+          {!done ? (
+            <Pressable
+              onPress={(e) => {
+                stop(e);
+                onExpire();
+              }}
+              disabled={busy}
+              hitSlop={6}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Ban size={14} color={Ink.t55} strokeWidth={2.4} />
+              <AppText size={13} weight={800} color={Ink.t55}>
+                Expire
+              </AppText>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={(e) => {
+              stop(e);
+              onDelete();
+            }}
             disabled={busy}
             hitSlop={6}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <Ban size={14} color={Ink.t55} strokeWidth={2.4} />
-            <AppText size={13} weight={800} color={Ink.t55}>
-              Expire
+            <Trash2 size={14} color="#c8452f" strokeWidth={2.4} />
+            <AppText size={13} weight={800} color="#c8452f">
+              {confirmDelete ? 'Tap to confirm' : 'Delete'}
             </AppText>
           </Pressable>
-        ) : null}
-        <Pressable
-          onPress={onDelete}
-          disabled={busy}
-          hitSlop={6}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Trash2 size={14} color="#c8452f" strokeWidth={2.4} />
-          <AppText size={13} weight={800} color="#c8452f">
-            {confirmDelete ? 'Tap to confirm' : 'Delete'}
-          </AppText>
-        </Pressable>
-      </View>
-    </Card>
+        </View>
+      </Card>
+    </Pressable>
   );
 }
 

@@ -73,7 +73,7 @@ export default function AdminReview() {
           <ReviewRow
             chore={item}
             onPress={() =>
-              router.push({ pathname: '/(admin)/review/[cid]', params: { cid: item.id } })
+              router.push({ pathname: '/(admin)/chore/[cid]', params: { cid: item.id } })
             }
           />
         )}
