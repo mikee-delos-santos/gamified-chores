@@ -157,7 +157,7 @@ class ChoresController < ApplicationController
       how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
       proof_photo_urls: proof_urls,
       proof_photo_url: proof_urls.first,
-      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name } : nil
+      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name, color: chore.proof_by_child.color } : nil
     }
   end
 end
