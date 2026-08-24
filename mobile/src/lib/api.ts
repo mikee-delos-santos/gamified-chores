@@ -68,7 +68,7 @@ export interface Chore {
   how_to_photo_urls: string[];
   proof_photo_urls: string[];
   proof_photo_url: string | null; // first proof photo, kept for older clients
-  proof_by: { id: number; name: string } | null;
+  proof_by: { id: number; name: string; color: string | null } | null;
 }
 
 /** A reusable chore an admin posts on demand. No completion state. */
@@ -90,6 +90,7 @@ export interface ChildProfile {
   id: number;
   name: string;
   balance: number;
+  color: string | null;
 }
 
 export interface CompletedChore {

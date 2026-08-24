@@ -16,7 +16,6 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card, CoinChip } from '@/components/ui/card';
-import { DangerZone } from '@/components/ui/danger-zone';
 import { NotificationsCard } from '@/components/ui/notifications-card';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { usePhotoSource } from '@/components/ui/photo-source-sheet';
@@ -287,11 +286,6 @@ export default function AdminChores() {
           )
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        ListFooterComponent={
-          <View style={{ marginTop: 24 }}>
-            <DangerZone token={token} onChanged={load} />
-          </View>
-        }
         renderItem={({ item, index }) => (
           <Pop delay={index * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
             <ChoreRow
@@ -423,7 +417,7 @@ function ChoreRow({
     <Pressable
       onPress={() => router.push({ pathname: '/(admin)/chore/[cid]', params: { cid: chore.id } })}
       style={({ pressed }) => ({ opacity: pressed ? 0.97 : 1 })}>
-      <Card style={{ padding: 14, gap: 12 }}>
+      <Card style={{ padding: 14, gap: 12, ...(chore.proof_by?.color ? { borderColor: chore.proof_by.color } : null) }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ flex: 1, gap: 3 }}>
             <AppText size={16} weight={800} color={Color.navy}>
@@ -443,7 +437,7 @@ function ChoreRow({
         {chore.proof_photo_urls.length > 0 ? (
           <View style={{ gap: 4 }}>
             <AppText size={12} weight={700} color={Ink.t55}>
-              Proof from kid
+              {`Proof from ${chore.proof_by?.name ?? 'kid'}`}
             </AppText>
             <PhotoThumbs urls={chore.proof_photo_urls} size={64} />
           </View>
@@ -451,7 +445,7 @@ function ChoreRow({
 
         {chore.status === 'open' ? (
           <SecondaryButton
-            label="Award to a kid"
+            label="View"
             onPress={(e?: GestureResponderEvent) => {
               e?.stopPropagation();
               onAward();

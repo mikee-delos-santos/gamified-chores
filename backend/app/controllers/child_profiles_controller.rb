@@ -5,7 +5,7 @@ class ChildProfilesController < ApplicationController
 
   def index
     profiles = ChildProfile.order(:id).map do |child|
-      { id: child.id, name: child.name, balance: child.balance.to_f }
+      { id: child.id, name: child.name, balance: child.balance.to_f, color: child.color }
     end
     render json: profiles
   end
@@ -16,6 +16,7 @@ class ChildProfilesController < ApplicationController
       id: child.id,
       name: child.name,
       balance: child.balance.to_f,
+      color: child.color,
       completed_chores: completed_chores_json(child)
     }
   end
@@ -23,14 +24,14 @@ class ChildProfilesController < ApplicationController
   # POST /child_profiles { name } — admin adds a kid to their family.
   def create
     child = current_family.child_profiles.create!(name: params.require(:name))
-    render json: { id: child.id, name: child.name, balance: child.balance.to_f }, status: :created
+    render json: { id: child.id, name: child.name, balance: child.balance.to_f, color: child.color }, status: :created
   end
 
   # PATCH /child_profiles/:id { name } — admin renames a kid.
   def update
     child = current_family.child_profiles.find(params[:id])
     child.update!(name: params.require(:name))
-    render json: { id: child.id, name: child.name, balance: child.balance.to_f }
+    render json: { id: child.id, name: child.name, balance: child.balance.to_f, color: child.color }
   end
 
   # DELETE /child_profiles/:id — admin removes a kid (and their ledger).

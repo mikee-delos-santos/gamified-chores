@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { PrimaryButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DangerZone } from '@/components/ui/danger-zone';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -36,6 +37,9 @@ export default function AdminKids() {
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
   const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
+  // Super-admin tools stay hidden until a long-press on the title reveals them,
+  // so the destructive actions aren't a stray tap away.
+  const [showDanger, setShowDanger] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -103,9 +107,13 @@ export default function AdminKids() {
                 paddingTop: 8,
                 paddingBottom: 16,
               }}>
-              <AppText size={24} weight={800} color={Color.navy}>
-                Kids
-              </AppText>
+              <Pressable
+                delayLongPress={1200}
+                onLongPress={() => setShowDanger((v) => !v)}>
+                <AppText size={24} weight={800} color={Color.navy}>
+                  Kids
+                </AppText>
+              </Pressable>
               <Pressable
                 hitSlop={8}
                 onPress={async () => {
@@ -147,6 +155,13 @@ export default function AdminKids() {
           )
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ListFooterComponent={
+          showDanger ? (
+            <View style={{ marginTop: 24 }}>
+              <DangerZone token={token} onChanged={load} />
+            </View>
+          ) : null
+        }
         renderItem={({ item, index }) => (
           <Pop delay={index * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
             <KidRow kid={item} token={token} onChanged={load} />
