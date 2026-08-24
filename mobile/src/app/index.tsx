@@ -30,7 +30,12 @@ export default function RoleGate() {
   }, []);
 
   if (status === 'loading' || !checkedBound) return null; // brief; avoids flashing the gate
-  if (status === 'signedIn') return <Redirect href="/(admin)/(tabs)/chores" />;
+  if (status === 'signedIn') {
+    // A notification tap includes a chore param; send the admin straight to that chore's review.
+    // A normal cold launch has no param and lands on the default Chores tab as before.
+    if (chore) return <Redirect href={{ pathname: '/(admin)/review/[cid]', params: { cid: chore } }} />;
+    return <Redirect href="/(admin)/(tabs)/chores" />;
+  }
   if (bound) {
     // A chore notification on the kid's device deep-links to that chore; otherwise their home.
     if (chore) {
