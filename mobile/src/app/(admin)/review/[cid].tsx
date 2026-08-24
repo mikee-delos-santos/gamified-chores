@@ -13,7 +13,7 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
-import { Card, CoinChip } from '@/components/ui/card';
+import { CoinChip } from '@/components/ui/card';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { Screen } from '@/components/ui/screen';
 import { ChildProfile, Chore, completeChore, listChildProfiles, listChores } from '@/lib/api';
