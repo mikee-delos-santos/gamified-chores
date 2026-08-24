@@ -1,5 +1,4 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Chore, listChores } from '@/lib/api';
 
@@ -42,12 +41,12 @@ export function useReviewQueue(token: string | null): UseReviewQueueResult {
     }
   }, [token]);
 
-  // Refresh whenever this screen (or any screen that mounts the hook) gains focus.
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
+  // Load once when the provider mounts (and again if the token changes). The Review screen drives
+  // the on-focus refresh; awarding/rejecting a chore drives the after-action refresh. Both go
+  // through this one instance so the tab-bar badge and the list update together.
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

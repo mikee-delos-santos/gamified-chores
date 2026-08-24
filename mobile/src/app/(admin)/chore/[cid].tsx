@@ -11,6 +11,7 @@ import { CoinChip } from '@/components/ui/card';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { Screen } from '@/components/ui/screen';
+import { useReviewQueueContext } from '@/hooks/review-queue-context';
 import { ChildProfile, Chore, completeChore, listChildProfiles, listChores, rejectChore } from '@/lib/api';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
@@ -44,6 +45,7 @@ export default function AdminChoreDetail() {
   const { cid } = useLocalSearchParams<{ cid: string }>();
   const router = useRouter();
   const { token } = useSession();
+  const { refetch: refetchReviewQueue } = useReviewQueueContext();
   const choreId = Number(cid);
 
   const [chore, setChore] = useState<Chore | null>(null);
@@ -97,6 +99,7 @@ export default function AdminChoreDetail() {
     setAwardError(null);
     try {
       await completeChore(token, chore.id, { child_profile_id: childId, grade: g });
+      refetchReviewQueue();
       router.replace('/(admin)/(tabs)/review');
     } catch {
       setAwardError('Could not award it. Try again.');
@@ -115,6 +118,7 @@ export default function AdminChoreDetail() {
     setAwardError(null);
     try {
       await rejectChore(token, chore.id);
+      refetchReviewQueue();
       router.replace('/(admin)/(tabs)/review');
     } catch {
       setAwardError('Could not reject it. Try again.');

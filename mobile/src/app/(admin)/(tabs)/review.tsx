@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,17 +14,23 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { CoinChip } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
-import { useReviewQueue } from '@/hooks/use-review-queue';
+import { useReviewQueueContext } from '@/hooks/review-queue-context';
 import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import { Chore } from '@/lib/api';
-import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
 export default function AdminReview() {
-  const { token } = useSession();
   const router = useRouter();
-  const { queue, loading, refreshing, onRefresh } = useReviewQueue(token);
+  const { queue, loading, refreshing, onRefresh, refetch } = useReviewQueueContext();
   const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
+
+  // Refresh the shared queue (list + tab-bar badge) every time this tab regains focus, so a
+  // freshly submitted chore shows up without a manual pull.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const listRef = useCallback((r: FlatList<Chore> | null) => {
     setScrollNode((r as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.() ?? null);
