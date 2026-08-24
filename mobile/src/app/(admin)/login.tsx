@@ -21,7 +21,7 @@ export default function AdminLogin() {
 
   // Already signed in (e.g. the boot check resolved while here): go to the hub.
   if (status === 'signedIn') {
-    return <Redirect href="/(admin)/chores" />;
+    return <Redirect href="/(admin)/(tabs)/chores" />;
   }
 
   async function onSubmit() {
@@ -29,7 +29,7 @@ export default function AdminLogin() {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      router.replace('/(admin)/chores');
+      router.replace('/(admin)/(tabs)/chores');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError('That email or password did not work.');

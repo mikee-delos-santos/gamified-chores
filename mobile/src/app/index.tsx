@@ -30,7 +30,7 @@ export default function RoleGate() {
   }, []);
 
   if (status === 'loading' || !checkedBound) return null; // brief; avoids flashing the gate
-  if (status === 'signedIn') return <Redirect href="/(admin)/chores" />;
+  if (status === 'signedIn') return <Redirect href="/(admin)/(tabs)/chores" />;
   if (bound) {
     // A chore notification on the kid's device deep-links to that chore; otherwise their home.
     if (chore) {
@@ -60,7 +60,7 @@ export default function RoleGate() {
 
         <View style={{ gap: 12, marginTop: 24 }}>
           <PrimaryButton label="I'm a kid" onPress={() => router.push('/(kid)/profiles')} />
-          <SecondaryButton label="I'm a grown-up" onPress={() => router.push('/(admin)/chores')} />
+          <SecondaryButton label="I'm a grown-up" onPress={() => router.push('/(admin)/(tabs)/chores')} />
         </View>
       </View>
     </Screen>
