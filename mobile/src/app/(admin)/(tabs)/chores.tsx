@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { Ban, Check, Pencil, PiggyBank, Star, Trash2, Users } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
+import { Ban, Check, Pencil, Star, Trash2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Platform, Pressable, RefreshControl, View } from 'react-native';
 
@@ -43,8 +43,7 @@ function awardFor(grade: number, reward: number): number {
 }
 
 export default function AdminChores() {
-  const { token, signOut } = useSession();
-  const router = useRouter();
+  const { token } = useSession();
 
   const [chores, setChores] = useState<Chore[]>([]);
   const [templates, setTemplates] = useState<ChoreTemplate[]>([]);
@@ -173,36 +172,6 @@ export default function AdminChores() {
               <AppText size={24} weight={800} color={Color.navy}>
                 Chores
               </AppText>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => router.push('/(admin)/bank')}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <PiggyBank size={16} color={Color.primary} strokeWidth={2.4} />
-                  <AppText size={14} weight={800} color={Color.primary}>
-                    Bank
-                  </AppText>
-                </Pressable>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => router.push('/(admin)/kids')}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Users size={16} color={Color.primary} strokeWidth={2.4} />
-                  <AppText size={14} weight={800} color={Color.primary}>
-                    Kids
-                  </AppText>
-                </Pressable>
-                <Pressable
-                  hitSlop={8}
-                  onPress={async () => {
-                    await signOut();
-                    router.replace('/');
-                  }}>
-                  <AppText size={14} weight={800} color={Ink.t55}>
-                    Sign out
-                  </AppText>
-                </Pressable>
-              </View>
             </View>
 
             <Card style={{ gap: 10, padding: 16, marginBottom: 18 }}>

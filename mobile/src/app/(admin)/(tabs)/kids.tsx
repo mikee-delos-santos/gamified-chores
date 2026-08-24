@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Check, ChevronLeft, Pencil, Trash2, X } from 'lucide-react-native';
+import { Check, Pencil, Trash2, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, View } from 'react-native';
 
@@ -26,7 +26,7 @@ import { Color, Ink, Radius } from '@/theme/tokens';
 const DANGER = '#c8452f';
 
 export default function AdminKids() {
-  const { token } = useSession();
+  const { token, signOut } = useSession();
   const router = useRouter();
 
   const [kids, setKids] = useState<ChildProfile[]>([]);
@@ -95,14 +95,25 @@ export default function AdminKids() {
             {Platform.OS === 'web' && refreshing ? (
               <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
             ) : null}
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 16 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                paddingBottom: 16,
+              }}>
+              <AppText size={24} weight={800} color={Color.navy}>
+                Kids
+              </AppText>
               <Pressable
-                onPress={() => router.replace('/(admin)/chores')}
                 hitSlop={8}
-                style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ChevronLeft size={22} color={Color.primary} strokeWidth={2.6} />
-                <AppText size={24} weight={800} color={Color.navy}>
-                  Kids
+                onPress={async () => {
+                  await signOut();
+                  router.replace('/');
+                }}>
+                <AppText size={14} weight={800} color={Ink.t55}>
+                  Sign out
                 </AppText>
               </Pressable>
             </View>
