@@ -25,10 +25,20 @@ No Ruby is installed on the host — everything runs in containers.
   on the `chore-app_default` network.
 - Rails auto-merges `DATABASE_URL` over `config/database.yml`.
 
-## Endpoints so far
+## Endpoints
 
-- `GET /up` — Rails' built-in HTML health check (for load balancers).
-- `GET /health` — JSON `{ "status": "ok", ... }` for the API + the mobile connectivity probe.
+The full route + model + lifecycle map lives in the root `CLAUDE.md` ("How the app actually
+works"). Health checks: `GET /up` (Rails HTML, for load balancers) and `GET /health` (JSON
+`{ "status": "ok", ... }`, used by the mobile connectivity probe).
+
+## Media attachments
+
+Photos use Active Storage (photo-only, ADR 0002). `Chore` has `has_many_attached :how_to_photos`
+and `has_many_attached :proof_photos`; `ChoreTemplate` has `has_many_attached :how_to_photos`.
+Uploads come in as multipart arrays (`how_to_photos[]`, `proof_photos[]`) and **append**. The
+proof endpoint also still accepts a singular `proof_photo` for older PWA clients. If you ever
+rename an attachment, add a data migration to rename the `active_storage_attachments.name` rows
+or existing blobs orphan (prod has real data - see the memory on live production data).
 
 ## Conventions (as the app grows)
 

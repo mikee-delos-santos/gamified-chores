@@ -40,7 +40,7 @@ export default function AdminReviewDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [zoom, setZoom] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const [grading, setGrading] = useState(false);
   const [grade, setGrade] = useState(5);
   const [busy, setBusy] = useState(false);
@@ -176,22 +176,28 @@ export default function AdminReviewDetail() {
             <AppText size={15} weight={800} color={Color.navy}>
               Their proof
             </AppText>
-            {chore.proof_photo_url ? (
-              <Pressable onPress={() => setZoom(true)}>
-                <Image
-                  source={{ uri: chore.proof_photo_url }}
-                  style={{
-                    width: '100%',
-                    height: 260,
-                    borderRadius: Radius.card,
-                    backgroundColor: Color.softBlue,
-                  }}
-                  contentFit="cover"
-                />
-                <AppText size={12} weight={700} color={Ink.t55} style={{ marginTop: 6 }}>
-                  Tap to see it full size
+            {chore.proof_photo_urls.length > 0 ? (
+              <View style={{ gap: 10 }}>
+                {chore.proof_photo_urls.map((url) => (
+                  <Pressable key={url} onPress={() => setZoomUrl(url)}>
+                    <Image
+                      source={{ uri: url }}
+                      style={{
+                        width: '100%',
+                        height: 260,
+                        borderRadius: Radius.card,
+                        backgroundColor: Color.softBlue,
+                      }}
+                      contentFit="cover"
+                    />
+                  </Pressable>
+                ))}
+                <AppText size={12} weight={700} color={Ink.t55}>
+                  {chore.proof_photo_urls.length > 1
+                    ? 'Tap any photo to see it full size'
+                    : 'Tap to see it full size'}
                 </AppText>
-              </Pressable>
+              </View>
             ) : (
               <AppText size={13} weight={700} color={Ink.t55}>
                 No proof photo yet.
@@ -278,19 +284,19 @@ export default function AdminReviewDetail() {
         </ScrollView>
       )}
 
-      <Modal visible={zoom} transparent animationType="fade" onRequestClose={() => setZoom(false)}>
+      <Modal visible={zoomUrl != null} transparent animationType="fade" onRequestClose={() => setZoomUrl(null)}>
         <Pressable
-          onPress={() => setZoom(false)}
+          onPress={() => setZoomUrl(null)}
           style={{ flex: 1, backgroundColor: 'rgba(6,20,34,0.92)', justifyContent: 'center', alignItems: 'center' }}>
-          {chore?.proof_photo_url ? (
+          {zoomUrl ? (
             <Image
-              source={{ uri: chore.proof_photo_url }}
+              source={{ uri: zoomUrl }}
               style={{ width: '100%', height: '80%' }}
               contentFit="contain"
             />
           ) : null}
           <Pressable
-            onPress={() => setZoom(false)}
+            onPress={() => setZoomUrl(null)}
             hitSlop={10}
             style={{
               position: 'absolute',

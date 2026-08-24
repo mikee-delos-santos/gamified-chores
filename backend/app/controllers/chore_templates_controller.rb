@@ -72,6 +72,7 @@ class ChoreTemplatesController < ApplicationController
 
   # The posted chore is serialized exactly like ChoresController does.
   def chore_json(chore)
+    proof_urls = chore.proof_photos.attached? ? chore.proof_photos.map { |p| url_for(p) } : []
     {
       id: chore.id,
       title: chore.title,
@@ -83,7 +84,8 @@ class ChoreTemplatesController < ApplicationController
       completed_by: chore.completed_by_id,
       completed_at: chore.completed_at,
       how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
-      proof_photo_url: chore.proof_photo.attached? ? url_for(chore.proof_photo) : nil,
+      proof_photo_urls: proof_urls,
+      proof_photo_url: proof_urls.first,
       proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name } : nil
     }
   end
