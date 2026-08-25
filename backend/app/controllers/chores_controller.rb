@@ -41,12 +41,15 @@ class ChoresController < ApplicationController
   end
 
   def create
-    chore = current_family.chores.new(chore_params)
-    chore.created_by = current_user
-    chore.child_profile_id = assignee_id if params.key?(:child_profile_id)
-    chore.save!
-    chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
-    PushNotifier.notify_chore(chore, title: "New chore", body: chore.title, url: "/?chore=#{chore.id}")
+    chore = Chores::Creator.call(
+      family: current_family,
+      created_by: current_user,
+      title: chore_params[:title],
+      description: chore_params[:description],
+      reward_coins: chore_params[:reward_coins],
+      assignee: params.key?(:child_profile_id) ? assignee : nil,
+      how_to_photos: params[:how_to_photos],
+    )
     render json: chore_json(chore), status: :created
   end
 
@@ -54,7 +57,7 @@ class ChoresController < ApplicationController
   # Passing child_profile_id (blank clears it) reassigns the chore; omitting it leaves it as-is.
   def update
     chore = current_family.chores.find(params[:id])
-    chore.child_profile_id = assignee_id if params.key?(:child_profile_id)
+    chore.assigned_to = assignee if params.key?(:child_profile_id)
     chore.update!(chore_params)
     chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
     render json: chore_json(chore)
@@ -95,32 +98,11 @@ class ChoresController < ApplicationController
   # atomically and idempotently (an already-completed chore is rejected).
   def complete
     chore = current_family.chores.find(params[:id])
-    unless chore.open?
-      return render json: { error: "chore is not open (already #{chore.status})" },
-                    status: :unprocessable_entity
-    end
-
     child = current_family.child_profiles.find(params[:child_profile_id])
-    grade = params[:grade].to_i
-    unless (1..5).cover?(grade)
-      return render json: { error: "grade must be an integer 1-5" },
-                    status: :unprocessable_entity
-    end
-
-    award = chore.award_for(grade)
-    ActiveRecord::Base.transaction do
-      chore.update!(status: :completed, completed_by: child, completed_at: Time.current, grade: grade)
-      CoinTransaction.create!(child_profile: child, amount: award, chore: chore, reason: :chore_reward)
-    end
-
-    PushNotifier.notify_chore(
-      chore,
-      title: "Nice work, #{child.name}!",
-      body: "#{award.to_f} coins for #{chore.title}",
-      url: "/?chore=#{chore.id}",
-    )
-
-    render json: chore_json(chore).merge(awarded: award.to_f, child_balance: child.balance.to_f)
+    result = Chores::Approver.call(chore: chore, child: child, grade: params[:grade].to_i)
+    render json: chore_json(result.chore).merge(awarded: result.award.to_f, child_balance: child.balance.to_f)
+  rescue Chores::Approver::NotOpen, Chores::Approver::BadGrade => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # POST /chores/:id/expire — retire a live chore that no longer applies.
@@ -141,22 +123,9 @@ class ChoresController < ApplicationController
   # resubmit (an admin would re-post the chore). Distinct from expire ("no longer applies").
   def reject
     chore = current_family.chores.find(params[:id])
-    unless chore.open?
-      return render json: { error: "chore is not open (already #{chore.status})" },
-                    status: :unprocessable_entity
-    end
-
-    chore.update!(status: :rejected)
-
-    who = chore.proof_by_child&.name
-    PushNotifier.notify_chore(
-      chore,
-      title: "Chore not done",
-      body: who ? "#{who}: #{chore.title} was marked not done" : "#{chore.title} was marked not done",
-      url: "/?chore=#{chore.id}",
-    )
-
-    render json: chore_json(chore)
+    render json: chore_json(Chores::Rejecter.call(chore: chore))
+  rescue Chores::Rejecter::NotOpen => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private
@@ -167,17 +136,19 @@ class ChoresController < ApplicationController
 
   # The kid to assign this chore to, or nil to clear it. A blank param means "unassign";
   # a non-family kid id is rejected so a chore can't be assigned outside the family.
-  def assignee_id
+  def assignee
     raw = params[:child_profile_id]
     return nil if raw.blank?
 
-    current_family.child_profiles.find(raw).id
+    current_family.child_profiles.find(raw)
   end
 
   def valid_status?(status)
     status.present? && Chore.statuses.key?(status)
   end
 
+  # Pagination for the chores index (infinite scroll). chore_json now lives in
+  # ApplicationController (shared with the MCP tools via ChoreSerializer).
   DEFAULT_PER = 20
   MAX_PER = 100
 
@@ -195,25 +166,5 @@ class ChoresController < ApplicationController
 
   def truthy?(value)
     %w[1 true yes].include?(value.to_s.downcase)
-  end
-
-  def chore_json(chore)
-    proof_urls = chore.proof_photos.attached? ? chore.proof_photos.map { |p| url_for(p) } : []
-    {
-      id: chore.id,
-      title: chore.title,
-      description: chore.description,
-      reward_coins: chore.reward_coins.to_f,
-      status: chore.status,
-      grade: chore.grade,
-      created_by: chore.created_by_id,
-      completed_by: chore.completed_by_id,
-      completed_at: chore.completed_at,
-      how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
-      proof_photo_urls: proof_urls,
-      proof_photo_url: proof_urls.first,
-      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name, color: chore.proof_by_child.color } : nil,
-      assigned_to: chore.assigned_to ? { id: chore.assigned_to.id, name: chore.assigned_to.name, color: chore.assigned_to.color } : nil
-    }
   end
 end

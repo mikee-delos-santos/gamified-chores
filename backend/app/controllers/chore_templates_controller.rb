@@ -33,15 +33,7 @@ class ChoreTemplatesController < ApplicationController
   # fire the same "new chore" push that ChoresController#create sends.
   def post_chore
     template = current_family.chore_templates.find(params[:id])
-    chore = current_family.chores.new(
-      title: template.title,
-      description: template.description,
-      reward_coins: template.reward_coins,
-      created_by: current_user,
-    )
-    chore.save!
-    copy_how_to_photos(template, chore)
-    PushNotifier.notify_family(current_family, title: "New chore", body: chore.title, url: "/")
+    chore = Chores::TemplatePoster.call(template: template, created_by: current_user)
     render json: chore_json(chore), status: :created
   end
 
@@ -51,15 +43,6 @@ class ChoreTemplatesController < ApplicationController
     params.permit(:title, :description, :reward_coins)
   end
 
-  # Re-attach the template's how-to blobs to the new chore (no re-upload).
-  def copy_how_to_photos(template, chore)
-    return unless template.how_to_photos.attached?
-
-    template.how_to_photos.each do |photo|
-      chore.how_to_photos.attach(photo.blob)
-    end
-  end
-
   def chore_template_json(template)
     {
       id: template.id,
@@ -67,26 +50,6 @@ class ChoreTemplatesController < ApplicationController
       description: template.description,
       reward_coins: template.reward_coins.to_f,
       how_to_photo_urls: template.how_to_photos.attached? ? template.how_to_photos.map { |p| url_for(p) } : []
-    }
-  end
-
-  # The posted chore is serialized exactly like ChoresController does.
-  def chore_json(chore)
-    proof_urls = chore.proof_photos.attached? ? chore.proof_photos.map { |p| url_for(p) } : []
-    {
-      id: chore.id,
-      title: chore.title,
-      description: chore.description,
-      reward_coins: chore.reward_coins.to_f,
-      status: chore.status,
-      grade: chore.grade,
-      created_by: chore.created_by_id,
-      completed_by: chore.completed_by_id,
-      completed_at: chore.completed_at,
-      how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
-      proof_photo_urls: proof_urls,
-      proof_photo_url: proof_urls.first,
-      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name, color: chore.proof_by_child.color } : nil
     }
   end
 end

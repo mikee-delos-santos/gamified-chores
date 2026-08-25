@@ -8,6 +8,9 @@ Rails.application.routes.draw do
   # JSON health check for the API and the mobile app's connectivity probe.
   get "health" => "health#show"
 
+  # Model Context Protocol endpoint for AI agents (JSON-RPC). Auth reuses the admin JWT.
+  post "mcp" => "mcp#handle"
+
   # Admin auth
   post "auth/login" => "auth#login"
   get "me" => "me#show" # protected; returns the current admin
