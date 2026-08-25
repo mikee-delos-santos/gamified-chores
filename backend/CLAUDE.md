@@ -31,6 +31,14 @@ The full route + model + lifecycle map lives in the root `CLAUDE.md` ("How the a
 works"). Health checks: `GET /up` (Rails HTML, for load balancers) and `GET /health` (JSON
 `{ "status": "ok", ... }`, used by the mobile connectivity probe).
 
+## MCP endpoint (AI agents)
+
+`POST /mcp` is a JSON-RPC Model Context Protocol endpoint (`mcp` gem, Streamable HTTP, tools-only)
+that authenticated AI agents connect to. `McpController` reuses the admin JWT for auth and scopes
+every tool to the admin's family; the six tools live in `app/services/chore_mcp/` and call the same
+`app/services/chores/` operations and `ChoreSerializer` the REST controllers use, so both surfaces
+behave identically.
+
 ## Media attachments
 
 Photos use Active Storage (photo-only, ADR 0002). `Chore` has `has_many_attached :how_to_photos`

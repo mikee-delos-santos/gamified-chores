@@ -15,4 +15,9 @@ class ApplicationController < ActionController::API
   def current_family
     current_user&.family
   end
+
+  # The one chore JSON shape, shared by every controller (and mirrored by the MCP tools).
+  def chore_json(chore)
+    ChoreSerializer.new(url_for: method(:url_for)).as_json(chore)
+  end
 end

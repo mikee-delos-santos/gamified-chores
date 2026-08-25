@@ -82,10 +82,17 @@ which writes the completion + a `CoinTransaction` in one transaction, idempotent
 - Templates (admin): `GET/POST /chore_templates`, `PATCH /chore_templates/:id`,
   `POST /chore_templates/:id/post_chore`.
 - Coin bank: child balances/transactions, `peso_per_coin`, cash-out requests.
+- MCP (AI agents, JWT): `POST /mcp` - a JSON-RPC Model Context Protocol endpoint any authenticated
+  agent connects to. Reuses the admin JWT (an agent with an admin token is a full admin, scoped to
+  its family). Tools: `create_chore`, `approve_chore`, `reject_chore`, `list_chores`,
+  `list_children`, `post_chore_from_template`. See `McpController` + `app/services/chore_mcp/`.
 - Health: `GET /health` (JSON), `GET /up` (Rails HTML).
 
-Chores serialize through `chore_json` (duplicated in `ChoresController` and
-`ChoreTemplatesController`). Photo fields are `how_to_photo_urls` (array), `proof_photo_urls`
+Chores serialize through the shared `ChoreSerializer` (a single source of truth for the chore JSON
+shape, used by every controller via `ApplicationController#chore_json` and mirrored by the MCP
+tools). The create/approve/reject/post-from-template operations live in `app/services/chores/`
+(`Creator`, `Approver`, `Rejecter`, `TemplatePoster`) so REST and MCP run identical logic,
+including the push notifications. Photo fields are `how_to_photo_urls` (array), `proof_photo_urls`
 (array), plus `proof_photo_url` (first proof url, kept for older PWA clients).
 
 **Mobile structure** (`mobile/src/app`, expo-router file routes; one binary, two areas):
