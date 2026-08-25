@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Ban, Check, Pencil, Star, Trash2, X } from 'lucide-react-native';
+import { Ban, Check, ChevronRight, Pencil, Star, Trash2, X } from 'lucide-react-native';
 import { ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,7 +16,6 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card, CoinChip } from '@/components/ui/card';
-import { NotificationsCard } from '@/components/ui/notifications-card';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { usePhotoSource } from '@/components/ui/photo-source-sheet';
 import { Pop } from '@/components/ui/pop';
@@ -50,10 +49,21 @@ function awardFor(grade: number, reward: number): number {
   return Math.round((grade / 5) * reward * 100) / 100;
 }
 
+const PER = 20;
+
 export default function AdminChores() {
   const { token } = useSession();
+  const router = useRouter();
 
+  // Which segment is showing: the paginated active (open) chores, or the recurring templates.
+  const [tab, setTab] = useState<'active' | 'recurring'>('active');
+
+  // Active list — paginated, infinite scroll.
   const [chores, setChores] = useState<Chore[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [templates, setTemplates] = useState<ChoreTemplate[]>([]);
   const [kids, setKids] = useState<ChildProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,14 +71,13 @@ export default function AdminChores() {
   const [error, setError] = useState<string | null>(null);
   const [scrollNode, setScrollNode] = useState<HTMLElement | null>(null);
 
-  // New-chore form
+  // Create form (shared by both segments; the recurring segment hides the assignee picker).
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [reward, setReward] = useState('');
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
-  const [recurring, setRecurring] = useState(false);
-  // Optional assignee for the new chore; null = open to any kid.
+  // Optional assignee for a new one-off chore; null = open to any kid.
   const [assignId, setAssignId] = useState<number | null>(null);
 
   // Award sheet + edit sheet
@@ -77,25 +86,35 @@ export default function AdminChores() {
 
   const { choose, sheet } = usePhotoSource();
 
+  const loadActive = useCallback(
+    async (nextPage: number, replace: boolean) => {
+      if (!token) return;
+      const batch = await listChores(token, { status: 'open', page: nextPage, per: PER });
+      setChores((prev) => (replace ? batch : [...prev, ...batch]));
+      setHasMore(batch.length === PER);
+      setPage(nextPage);
+    },
+    [token],
+  );
+
   const load = useCallback(async () => {
     if (!token) return;
     setError(null);
     try {
-      const [choreList, templateList, kidList] = await Promise.all([
-        listChores(token),
+      const [templateList, kidList] = await Promise.all([
         listChoreTemplates(token),
         listChildProfiles(),
       ]);
-      setChores(choreList);
       setTemplates(templateList);
       setKids(kidList);
+      await loadActive(1, true);
     } catch {
       setError('Could not load chores.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, loadActive]);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,8 +127,18 @@ export default function AdminChores() {
     load();
   }, [load]);
 
-  const listRef = useCallback((r: FlatList<Chore> | null) => {
-    setScrollNode((r as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.() ?? null);
+  // Load the next active page when the list nears its end (active segment only).
+  const onEndReached = useCallback(() => {
+    if (tab !== 'active' || loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    loadActive(page + 1, false)
+      .catch(() => setError('Could not load more chores.'))
+      .finally(() => setLoadingMore(false));
+  }, [tab, loading, loadingMore, hasMore, page, loadActive]);
+
+  // Shared by both lists; only used to grab the scrollable DOM node for web pull-to-refresh.
+  const listRef = useCallback((r: { getScrollableNode?: () => HTMLElement } | null) => {
+    setScrollNode(r?.getScrollableNode?.() ?? null);
   }, []);
 
   useWebPullToRefresh(scrollNode, onRefresh);
@@ -121,6 +150,7 @@ export default function AdminChores() {
       setError('Enter a title and a reward above 0.');
       return;
     }
+    const isRecurring = tab === 'recurring';
     setCreating(true);
     setError(null);
     try {
@@ -129,7 +159,7 @@ export default function AdminChores() {
         description: description.trim() || undefined,
         reward_coins: coins,
       };
-      if (recurring) {
+      if (isRecurring) {
         const template = await createChoreTemplate(token, input);
         if (newPhotos.length) {
           await uploadTemplateHowToPhotos(token, template.id, newPhotos);
@@ -145,11 +175,10 @@ export default function AdminChores() {
       setDescription('');
       setReward('');
       setNewPhotos([]);
-      setRecurring(false);
       setAssignId(null);
       await load();
     } catch {
-      setError(recurring ? 'Could not create the template.' : 'Could not create the chore.');
+      setError(isRecurring ? 'Could not create the template.' : 'Could not create the chore.');
     } finally {
       setCreating(false);
     }
@@ -160,154 +189,181 @@ export default function AdminChores() {
     if (uris.length) setNewPhotos((prev) => [...prev, ...uris]);
   }
 
+  // The create form + the tab-specific bits above each list. Kept as an element (not a component)
+  // so React doesn't remount it on each keystroke and drop the TextField focus.
+  const header = (
+    <View>
+      {Platform.OS === 'web' && refreshing ? (
+        <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
+      ) : null}
+      <View style={{ paddingTop: 8, paddingBottom: 14 }}>
+        <AppText size={24} weight={800} color={Color.navy}>
+          Chores
+        </AppText>
+      </View>
+
+      <Segmented value={tab} onChange={setTab} />
+
+      <Card style={{ gap: 10, padding: 16, marginTop: 16, marginBottom: 18 }}>
+        <AppText size={16} weight={800} color={Color.navy}>
+          {tab === 'recurring' ? 'New recurring chore' : 'New chore'}
+        </AppText>
+        <TextField placeholder="Chore title" value={title} onChangeText={setTitle} />
+        <TextField
+          placeholder="Description (optional)"
+          value={description}
+          onChangeText={setDescription}
+        />
+        <TextField
+          placeholder="Reward coins"
+          keyboardType="numeric"
+          value={reward}
+          onChangeText={setReward}
+        />
+        {newPhotos.length > 0 ? <PhotoThumbs urls={newPhotos} size={48} /> : null}
+        <SecondaryButton
+          label={newPhotos.length ? `How-to photos (${newPhotos.length})` : 'Add how-to photos'}
+          onPress={addNewPhotos}
+        />
+        {tab === 'active' && kids.length > 0 ? (
+          <AssignPicker kids={kids} value={assignId} onChange={setAssignId} />
+        ) : null}
+        {creating ? (
+          <View
+            style={{
+              backgroundColor: Color.primary,
+              borderRadius: Radius.card,
+              paddingVertical: 17,
+              alignItems: 'center',
+              borderBottomWidth: 6,
+              borderBottomColor: Color.primaryPress,
+            }}>
+            <ActivityIndicator color={Color.white} />
+          </View>
+        ) : (
+          <PrimaryButton
+            label={tab === 'recurring' ? 'Save recurring chore' : 'Add chore'}
+            onPress={onCreate}
+          />
+        )}
+      </Card>
+
+      {tab === 'active' ? (
+        <Pressable
+          onPress={() => router.push('/(admin)/archive')}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: Color.card,
+            borderRadius: Radius.card,
+            borderWidth: 2,
+            borderColor: Color.softBlue,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            marginBottom: 18,
+          }}>
+          <AppText size={15} weight={800} color={Color.navy}>
+            Done & archived
+          </AppText>
+          <ChevronRight size={20} color={Color.primary} strokeWidth={2.6} />
+        </Pressable>
+      ) : null}
+
+      {error ? (
+        <AppText size={13} weight={700} color="#c8452f" style={{ marginBottom: 10 }}>
+          {error}
+        </AppText>
+      ) : null}
+
+      {tab === 'active' && !loading && chores.length > 0 ? (
+        <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
+          Active chores
+        </AppText>
+      ) : null}
+      {tab === 'recurring' && templates.length > 0 ? (
+        <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
+          Recurring chores
+        </AppText>
+      ) : null}
+    </View>
+  );
+
+  const refreshControl = (
+    <RefreshControl refreshing={refreshing} tintColor={Color.primary} onRefresh={onRefresh} />
+  );
+
   return (
     <Screen padded={false}>
       {sheet}
-      <FlatList<Chore>
-        ref={listRef}
-        data={chores}
-        keyExtractor={(c) => String(c.id)}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} tintColor={Color.primary} onRefresh={onRefresh} />
-        }
-        ListHeaderComponent={
-          <View>
-            {Platform.OS === 'web' && refreshing ? (
-              <ActivityIndicator color={Color.primary} style={{ marginTop: 8 }} />
-            ) : null}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: 8,
-                paddingBottom: 16,
-              }}>
-              <AppText size={24} weight={800} color={Color.navy}>
-                Chores
-              </AppText>
-            </View>
-
-            <Card style={{ gap: 10, padding: 16, marginBottom: 18 }}>
-              <AppText size={16} weight={800} color={Color.navy}>
-                New chore
-              </AppText>
-              <TextField placeholder="Chore title" value={title} onChangeText={setTitle} />
-              <TextField
-                placeholder="Description (optional)"
-                value={description}
-                onChangeText={setDescription}
-              />
-              <TextField
-                placeholder="Reward coins"
-                keyboardType="numeric"
-                value={reward}
-                onChangeText={setReward}
-              />
-              {newPhotos.length > 0 ? <PhotoThumbs urls={newPhotos} size={48} /> : null}
-              <SecondaryButton
-                label={newPhotos.length ? `How-to photos (${newPhotos.length})` : 'Add how-to photos'}
-                onPress={addNewPhotos}
-              />
-              {!recurring && kids.length > 0 ? (
-                <AssignPicker kids={kids} value={assignId} onChange={setAssignId} />
-              ) : null}
-              <Pressable
-                onPress={() => setRecurring((v) => !v)}
-                hitSlop={6}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
-                    borderWidth: 2,
-                    borderColor: recurring ? Color.primary : Color.dashed,
-                    backgroundColor: recurring ? Color.primary : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  {recurring ? <Check size={14} color={Color.white} strokeWidth={3} /> : null}
-                </View>
-                <AppText size={14} weight={700} color={Color.navy}>
-                  Make this recurring
+      {tab === 'active' ? (
+        <FlatList<Chore>
+          ref={listRef}
+          data={chores}
+          keyExtractor={(c) => String(c.id)}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+          refreshControl={refreshControl}
+          onEndReachedThreshold={0.4}
+          onEndReached={onEndReached}
+          ListHeaderComponent={header}
+          ListEmptyComponent={
+            loading ? (
+              <ActivityIndicator color={Color.primary} style={{ marginTop: 24 }} />
+            ) : (
+              <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
+                <AppText size={15} weight={800} color={Color.navy}>
+                  No active chores
                 </AppText>
-              </Pressable>
-              {creating ? (
-                <View
-                  style={{
-                    backgroundColor: Color.primary,
-                    borderRadius: Radius.card,
-                    paddingVertical: 17,
-                    alignItems: 'center',
-                    borderBottomWidth: 6,
-                    borderBottomColor: Color.primaryPress,
-                  }}>
-                  <ActivityIndicator color={Color.white} />
-                </View>
-              ) : (
-                <PrimaryButton label={recurring ? 'Save recurring chore' : 'Add chore'} onPress={onCreate} />
-              )}
-            </Card>
-
-            <View style={{ marginBottom: 18 }}>
-              <NotificationsCard adminToken={token} />
-            </View>
-
-            {templates.length > 0 ? (
-              <View style={{ marginBottom: 18 }}>
-                <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
-                  Recurring
+                <AppText size={13} weight={700} color={Ink.t55} center style={{ marginTop: 4 }}>
+                  Add one above to get started.
                 </AppText>
-                <View style={{ gap: 10 }}>
-                  {templates.map((t) => (
-                    <TemplateRow key={t.id} template={t} token={token} onChanged={load} />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {error ? (
-              <AppText size={13} weight={700} color="#c8452f" style={{ marginBottom: 10 }}>
-                {error}
-              </AppText>
-            ) : null}
-
-            {!loading && chores.length > 0 ? (
-              <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
-                All chores
-              </AppText>
-            ) : null}
-          </View>
-        }
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator color={Color.primary} style={{ marginTop: 24 }} />
-          ) : (
-            <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
-              <AppText size={15} weight={800} color={Color.navy}>
-                No chores yet
-              </AppText>
-              <AppText size={13} weight={700} color={Ink.t55} center style={{ marginTop: 4 }}>
-                Add one above to get started.
-              </AppText>
-            </Card>
-          )
-        }
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        renderItem={({ item, index }) => (
-          <Pop delay={index * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
-            <ChoreRow
-              chore={item}
-              token={token}
-              onAward={() => setTarget(item)}
-              onEdit={() => setEditTarget(item)}
-              onChanged={load}
-            />
-          </Pop>
-        )}
-      />
+              </Card>
+            )
+          }
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator color={Color.primary} style={{ marginTop: 16 }} /> : null
+          }
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          renderItem={({ item, index }) => (
+            <Pop delay={Math.min(index, 8) * 50} from={0.99} translateY={10} damping={16} stiffness={150}>
+              <ChoreRow
+                chore={item}
+                token={token}
+                onAward={() => setTarget(item)}
+                onEdit={() => setEditTarget(item)}
+                onChanged={load}
+              />
+            </Pop>
+          )}
+        />
+      ) : (
+        <FlatList<ChoreTemplate>
+          ref={listRef}
+          data={templates}
+          keyExtractor={(t) => String(t.id)}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+          refreshControl={refreshControl}
+          ListHeaderComponent={header}
+          ListEmptyComponent={
+            loading ? (
+              <ActivityIndicator color={Color.primary} style={{ marginTop: 24 }} />
+            ) : (
+              <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
+                <AppText size={15} weight={800} color={Color.navy}>
+                  No recurring chores
+                </AppText>
+                <AppText size={13} weight={700} color={Ink.t55} center style={{ marginTop: 4 }}>
+                  Save one above to post it again anytime.
+                </AppText>
+              </Card>
+            )
+          }
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          renderItem={({ item }) => (
+            <TemplateRow template={item} token={token} onChanged={load} />
+          )}
+        />
+      )}
 
       <AwardSheet
         chore={target}
@@ -330,6 +386,50 @@ export default function AdminChores() {
         }}
       />
     </Screen>
+  );
+}
+
+// The Active | Recurring segmented control at the top of the Chores tab.
+function Segmented({
+  value,
+  onChange,
+}: {
+  value: 'active' | 'recurring';
+  onChange: (v: 'active' | 'recurring') => void;
+}) {
+  const options: { key: 'active' | 'recurring'; label: string }[] = [
+    { key: 'active', label: 'Active' },
+    { key: 'recurring', label: 'Recurring' },
+  ];
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: Color.softBlue,
+        borderRadius: Radius.pill,
+        padding: 4,
+        gap: 4,
+      }}>
+      {options.map((o) => {
+        const on = value === o.key;
+        return (
+          <Pressable
+            key={o.key}
+            onPress={() => onChange(o.key)}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 9,
+              borderRadius: Radius.pill,
+              backgroundColor: on ? Color.primary : 'transparent',
+            }}>
+            <AppText size={14} weight={800} color={on ? Color.white : Ink.t55}>
+              {o.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 

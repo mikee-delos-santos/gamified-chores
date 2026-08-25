@@ -31,7 +31,9 @@ export function useReviewQueue(token: string | null): UseReviewQueueResult {
   const refetch = useCallback(async () => {
     if (!token) return;
     try {
-      const all = await listChores(token);
+      // Server returns exactly the open-with-proof set, unpaginated, so the badge count is always
+      // complete. filterQueue still sorts oldest-first (and guards the shape defensively).
+      const all = await listChores(token, { needsReview: true });
       setQueue(filterQueue(all));
     } catch {
       // Leave the previous data in place on failure; the screen shows it stale.

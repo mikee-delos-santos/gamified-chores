@@ -12,7 +12,7 @@ import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { Screen } from '@/components/ui/screen';
 import { useReviewQueueContext } from '@/hooks/review-queue-context';
-import { ChildProfile, Chore, completeChore, listChildProfiles, listChores, rejectChore } from '@/lib/api';
+import { ChildProfile, Chore, completeChore, getChore, listChildProfiles, rejectChore } from '@/lib/api';
 import { fmtCoins } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -65,11 +65,10 @@ export default function AdminChoreDetail() {
     if (!token) return;
     setError(null);
     try {
-      const [chores, kids] = await Promise.all([listChores(token), listChildProfiles()]);
+      const [found, kids] = await Promise.all([getChore(token, choreId), listChildProfiles()]);
       setProfiles(kids);
-      const found = chores.find((c) => c.id === choreId) ?? null;
       setChore(found);
-      setChildId((prev) => prev ?? found?.proof_by?.id ?? null);
+      setChildId((prev) => prev ?? found.proof_by?.id ?? null);
     } catch {
       setError('Could not load this chore.');
     } finally {

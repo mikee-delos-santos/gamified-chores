@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/app-text';
+import { usePushAutoEnroll } from '@/hooks/use-push-auto-enroll';
 import { useRefreshOnPush } from '@/hooks/use-refresh-on-push';
 import { useReviewQueueContext } from '@/hooks/review-queue-context';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -95,6 +96,8 @@ function AdminTabBar({ state, navigation }: TabBarProps) {
 
 export default function AdminTabsLayout() {
   useRefreshOnPush();
+  // Silently re-subscribe for push on boot if already granted (no prompt).
+  usePushAutoEnroll();
   return (
     <Tabs
       screenOptions={{ headerShown: false }}

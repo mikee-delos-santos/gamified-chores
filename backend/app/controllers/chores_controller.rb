@@ -3,10 +3,28 @@ class ChoresController < ApplicationController
   # open + proof are kid-facing (kids have no login); everything else is admin-only.
   before_action :authenticate_admin!, except: [:proof, :open]
 
+  # GET /chores?status=&page=&per=&needs_review=
+  # Newest first. `status` filters by lifecycle state. `needs_review=1` returns the open chores
+  # that have proof attached (the Review queue) unpaginated, so its badge count stays exact.
+  # Otherwise the list is paginated with page/per for infinite scroll.
   def index
     chores = current_family.chores.order(created_at: :desc)
     chores = chores.where(status: params[:status]) if valid_status?(params[:status])
+
+    if truthy?(params[:needs_review])
+      chores = chores.where(status: :open).with_attached_proof_photos.select { |c| c.proof_photos.attached? }
+    else
+      chores = chores.limit(per_page).offset((page_number - 1) * per_page)
+    end
+
     render json: chores.map { |chore| chore_json(chore) }
+  end
+
+  # GET /chores/:id — one chore in the family. Lets the detail screen fetch a single chore
+  # instead of scanning the paginated list.
+  def show
+    chore = current_family.chores.find(params[:id])
+    render json: chore_json(chore)
   end
 
   # GET /open_chores — kid-facing list of chores still to do (unauthenticated, single-family MVP).
@@ -127,5 +145,26 @@ class ChoresController < ApplicationController
 
   def valid_status?(status)
     status.present? && Chore.statuses.key?(status)
+  end
+
+  # Pagination for the chores index (infinite scroll). chore_json now lives in
+  # ApplicationController (shared with the MCP tools via ChoreSerializer).
+  DEFAULT_PER = 20
+  MAX_PER = 100
+
+  def page_number
+    n = params[:page].to_i
+    n.positive? ? n : 1
+  end
+
+  def per_page
+    n = params[:per].to_i
+    return DEFAULT_PER unless n.positive?
+
+    [n, MAX_PER].min
+  end
+
+  def truthy?(value)
+    %w[1 true yes].include?(value.to_s.downcase)
   end
 end

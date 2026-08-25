@@ -77,6 +77,22 @@ export async function enableNotifications(): Promise<EnableResult> {
   }
 }
 
+// Silent auto-enroll: only (re)subscribe when the user already granted permission, so this never
+// shows a prompt. Safe to call on every app boot — it keeps the subscription fresh and re-tags
+// kid devices (PC-72 replaced the manual opt-in card with automatic enrollment).
+export async function ensureSubscribedIfGranted(): Promise<void> {
+  if (!isPushSupported() || permissionState() !== 'granted') return;
+  await enableNotifications();
+}
+
+// Gesture-tied one-time request: on a fresh install (permission still 'default') ask once. Browsers
+// only allow the permission prompt from a user gesture, so call this from a tap handler — parent
+// login submit or kid PIN/profile unlock. Does nothing once the user has decided (granted/denied).
+export async function requestNotificationsOnGesture(): Promise<void> {
+  if (!isPushSupported() || permissionState() !== 'default') return;
+  await enableNotifications();
+}
+
 // Admin-only: fire a family-wide test notification. Returns the server's count, or throws.
 export async function sendTestNotification(token: string): Promise<number> {
   const res = await apiFetch('/push/test', {

@@ -8,6 +8,7 @@ import { CoinIcon } from '@/components/ui/coin-icon';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ApiError } from '@/lib/api';
+import { requestNotificationsOnGesture } from '@/lib/push';
 import { useSession } from '@/lib/session';
 import { Color, Ink } from '@/theme/tokens';
 
@@ -29,6 +30,9 @@ export default function AdminLogin() {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
+      // Fresh install: ask for notification permission once, riding this sign-in tap (browsers
+      // only allow the prompt from a user gesture). No-op if already granted/denied.
+      void requestNotificationsOnGesture();
       router.replace('/(admin)/(tabs)/chores');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

@@ -5,7 +5,6 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { NotificationsCard } from '@/components/ui/notifications-card';
 import { PinSheet } from '@/components/ui/pin-sheet';
 import { Screen } from '@/components/ui/screen';
 import { ChildProfileDetail, getChildProfile, getPinStatus, listOpenChores } from '@/lib/api';
@@ -97,8 +96,6 @@ export default function KidMe() {
               <StatTile label="Chores done" value={String(choresDone)} />
               <StatTile label="Coins all time" value={fmtCoins(coinsAllTime)} />
             </View>
-
-            <NotificationsCard />
           </View>
         )}
 
