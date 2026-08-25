@@ -25,6 +25,9 @@ class PushController < ApplicationController
     record.family = family
     record.p256dh = p256dh
     record.auth = auth
+    # Kid devices send their bound kid id so we can target pushes at that one kid; admin/parent
+    # devices omit it and stay untagged (nil). A blank or unknown id leaves the device untagged.
+    record.child_profile = family.child_profiles.find_by(id: params[:child_profile_id]) if params[:child_profile_id].present?
     record.save!
 
     render json: { ok: true }, status: :created

@@ -69,6 +69,8 @@ export interface Chore {
   proof_photo_urls: string[];
   proof_photo_url: string | null; // first proof photo, kept for older clients
   proof_by: { id: number; name: string; color: string | null } | null;
+  // The one kid this chore is assigned to, or null when it's open to any kid.
+  assigned_to: { id: number; name: string; color: string | null } | null;
 }
 
 /** A reusable chore an admin posts on demand. No completion state. */
@@ -148,6 +150,8 @@ export interface CreateChoreInput {
   title: string;
   description?: string;
   reward_coins: number;
+  // Assign to one kid, or null/empty to leave it open to any kid. Omit to leave unchanged on edit.
+  child_profile_id?: number | null;
 }
 
 export async function createChore(token: string, input: CreateChoreInput): Promise<Chore> {
@@ -331,9 +335,11 @@ export async function getChildProfile(id: number): Promise<ChildProfileDetail> {
   return json<ChildProfileDetail>(res);
 }
 
-/** Kid-facing list of chores still to do (unauthenticated). */
-export async function listOpenChores(): Promise<Chore[]> {
-  const res = await apiFetch('/open_chores');
+/** Kid-facing list of chores still to do (unauthenticated). Pass the bound kid's id so the list
+ * includes that kid's assigned chores plus the unassigned ones, and never another kid's. */
+export async function listOpenChores(childProfileId?: number): Promise<Chore[]> {
+  const query = childProfileId != null ? `?child_profile_id=${childProfileId}` : '';
+  const res = await apiFetch(`/open_chores${query}`);
   return json<Chore[]>(res);
 }
 

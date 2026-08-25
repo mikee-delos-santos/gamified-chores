@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_193000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_25_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -77,6 +77,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_193000) do
   end
 
   create_table "chores", force: :cascade do |t|
+    t.bigint "child_profile_id"
     t.datetime "completed_at"
     t.bigint "completed_by_id"
     t.datetime "created_at", null: false
@@ -89,6 +90,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_193000) do
     t.integer "status", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.index ["child_profile_id"], name: "index_chores_on_child_profile_id"
     t.index ["completed_by_id"], name: "index_chores_on_completed_by_id"
     t.index ["created_by_id"], name: "index_chores_on_created_by_id"
     t.index ["family_id"], name: "index_chores_on_family_id"
@@ -116,11 +118,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_193000) do
 
   create_table "push_subscriptions", force: :cascade do |t|
     t.string "auth", null: false
+    t.bigint "child_profile_id"
     t.datetime "created_at", null: false
     t.string "endpoint", null: false
     t.bigint "family_id", null: false
     t.string "p256dh", null: false
     t.datetime "updated_at", null: false
+    t.index ["child_profile_id"], name: "index_push_subscriptions_on_child_profile_id"
     t.index ["endpoint"], name: "index_push_subscriptions_on_endpoint", unique: true
     t.index ["family_id"], name: "index_push_subscriptions_on_family_id"
   end
@@ -144,12 +148,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_193000) do
   add_foreign_key "child_profiles", "families"
   add_foreign_key "chore_templates", "families"
   add_foreign_key "chore_templates", "users", column: "created_by_id"
+  add_foreign_key "chores", "child_profiles"
   add_foreign_key "chores", "child_profiles", column: "completed_by_id"
   add_foreign_key "chores", "child_profiles", column: "proof_by_child_id"
   add_foreign_key "chores", "families"
   add_foreign_key "chores", "users", column: "created_by_id"
   add_foreign_key "coin_transactions", "child_profiles"
   add_foreign_key "coin_transactions", "chores"
+  add_foreign_key "push_subscriptions", "child_profiles"
   add_foreign_key "push_subscriptions", "families"
   add_foreign_key "users", "families"
 end

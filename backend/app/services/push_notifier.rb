@@ -8,11 +8,26 @@ class PushNotifier
     return unless configured?
     return if family.nil?
 
-    payload = { title: title, body: body, url: url }.to_json
+    deliver_all(family.push_subscriptions, title: title, body: body, url: url)
+  end
 
-    family.push_subscriptions.find_each do |sub|
-      deliver(sub, payload)
+  # Notify about a chore, honoring its optional assignee. An assigned chore only reaches the
+  # parents (subscriptions with no kid) and the one assigned kid's devices; an unassigned chore
+  # falls back to the whole family.
+  def self.notify_chore(chore, title:, body:, url: "/")
+    return unless configured?
+    return if chore.nil? || chore.family.nil?
+
+    subs = chore.family.push_subscriptions
+    if chore.child_profile_id.present?
+      subs = subs.where(child_profile_id: [nil, chore.child_profile_id])
     end
+    deliver_all(subs, title: title, body: body, url: url)
+  end
+
+  def self.deliver_all(subscriptions, title:, body:, url:)
+    payload = { title: title, body: body, url: url }.to_json
+    subscriptions.find_each { |sub| deliver(sub, payload) }
   end
 
   def self.configured?

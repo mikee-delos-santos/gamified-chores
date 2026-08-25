@@ -10,24 +10,33 @@ class ChoresController < ApplicationController
   end
 
   # GET /open_chores — kid-facing list of chores still to do (unauthenticated, single-family MVP).
+  # An assigned chore is only visible to that kid; pass child_profile_id so a device sees its own
+  # kid's chores plus the unassigned ones. With no kid id, only unassigned chores are returned so
+  # an assigned chore is never leaked to an unknown device.
   def open
     family = Family.first
-    chores = family ? family.chores.where(status: :open).order(created_at: :desc) : []
+    unless family
+      return render json: []
+    end
+    chores = family.chores.where(status: :open).visible_to_kid(params[:child_profile_id]).order(created_at: :desc)
     render json: chores.map { |chore| chore_json(chore) }
   end
 
   def create
     chore = current_family.chores.new(chore_params)
     chore.created_by = current_user
+    chore.child_profile_id = assignee_id if params.key?(:child_profile_id)
     chore.save!
     chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
-    PushNotifier.notify_family(current_family, title: "New chore", body: chore.title, url: "/?chore=#{chore.id}")
+    PushNotifier.notify_chore(chore, title: "New chore", body: chore.title, url: "/?chore=#{chore.id}")
     render json: chore_json(chore), status: :created
   end
 
-  # PATCH /chores/:id { title, description, reward_coins, how_to_photos[] } — edit a chore.
+  # PATCH /chores/:id { title, description, reward_coins, child_profile_id, how_to_photos[] }.
+  # Passing child_profile_id (blank clears it) reassigns the chore; omitting it leaves it as-is.
   def update
     chore = current_family.chores.find(params[:id])
+    chore.child_profile_id = assignee_id if params.key?(:child_profile_id)
     chore.update!(chore_params)
     chore.how_to_photos.attach(params[:how_to_photos]) if params[:how_to_photos].present?
     render json: chore_json(chore)
@@ -45,8 +54,8 @@ class ChoresController < ApplicationController
     end
     chore.save!
     who = params[:by].presence || "A kid"
-    PushNotifier.notify_family(
-      chore.family,
+    PushNotifier.notify_chore(
+      chore,
       title: "Ready to check",
       body: "#{who} finished #{chore.title}",
       url: "/?chore=#{chore.id}",
@@ -58,8 +67,8 @@ class ChoresController < ApplicationController
   def destroy
     chore = current_family.chores.find(params[:id])
     title = chore.title
+    PushNotifier.notify_chore(chore, title: "Chore removed", body: title, url: "/")
     chore.destroy
-    PushNotifier.notify_family(current_family, title: "Chore removed", body: title, url: "/")
     render json: { ok: true }
   end
 
@@ -86,8 +95,8 @@ class ChoresController < ApplicationController
       CoinTransaction.create!(child_profile: child, amount: award, chore: chore, reason: :chore_reward)
     end
 
-    PushNotifier.notify_family(
-      current_family,
+    PushNotifier.notify_chore(
+      chore,
       title: "Nice work, #{child.name}!",
       body: "#{award.to_f} coins for #{chore.title}",
       url: "/?chore=#{chore.id}",
@@ -122,8 +131,8 @@ class ChoresController < ApplicationController
     chore.update!(status: :rejected)
 
     who = chore.proof_by_child&.name
-    PushNotifier.notify_family(
-      current_family,
+    PushNotifier.notify_chore(
+      chore,
       title: "Chore not done",
       body: who ? "#{who}: #{chore.title} was marked not done" : "#{chore.title} was marked not done",
       url: "/?chore=#{chore.id}",
@@ -136,6 +145,15 @@ class ChoresController < ApplicationController
 
   def chore_params
     params.permit(:title, :description, :reward_coins)
+  end
+
+  # The kid to assign this chore to, or nil to clear it. A blank param means "unassign";
+  # a non-family kid id is rejected so a chore can't be assigned outside the family.
+  def assignee_id
+    raw = params[:child_profile_id]
+    return nil if raw.blank?
+
+    current_family.child_profiles.find(raw).id
   end
 
   def valid_status?(status)
@@ -157,7 +175,8 @@ class ChoresController < ApplicationController
       how_to_photo_urls: chore.how_to_photos.attached? ? chore.how_to_photos.map { |p| url_for(p) } : [],
       proof_photo_urls: proof_urls,
       proof_photo_url: proof_urls.first,
-      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name, color: chore.proof_by_child.color } : nil
+      proof_by: chore.proof_by_child ? { id: chore.proof_by_child.id, name: chore.proof_by_child.name, color: chore.proof_by_child.color } : nil,
+      assigned_to: chore.assigned_to ? { id: chore.assigned_to.id, name: chore.assigned_to.name, color: chore.assigned_to.color } : nil
     }
   end
 end

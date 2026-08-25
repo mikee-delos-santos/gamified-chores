@@ -9,6 +9,11 @@ class ChildProfile < ApplicationRecord
            foreign_key: :completed_by_id,
            inverse_of: :completed_by,
            dependent: :nullify
+  has_many :assigned_chores,
+           class_name: "Chore",
+           foreign_key: :child_profile_id,
+           inverse_of: :assigned_to,
+           dependent: :nullify
 
   validates :name, presence: true
 
