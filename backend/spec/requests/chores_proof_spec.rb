@@ -27,7 +27,7 @@ RSpec.describe "POST /chores/:id/proof", type: :request do
 
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
-      expect(json["proof_by"]).to eq("id" => child.id, "name" => child.name)
+      expect(json["proof_by"]).to eq("id" => child.id, "name" => child.name, "color" => child.color)
 
       chore.reload
       expect(chore.proof_by_child_id).to eq(child.id)
@@ -58,7 +58,7 @@ RSpec.describe "POST /chores/:id/proof", type: :request do
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
       found = json.find { |c| c["id"] == chore.id }
-      expect(found["proof_by"]).to eq("id" => child.id, "name" => child.name)
+      expect(found["proof_by"]).to eq("id" => child.id, "name" => child.name, "color" => child.color)
     end
   end
 

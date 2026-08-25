@@ -6,7 +6,16 @@ class Chore < ApplicationRecord
              inverse_of: :completed_chores,
              optional: true
   belongs_to :proof_by_child, class_name: "ChildProfile", optional: true
+  # Optional assignee (FK column child_profile_id): nil = open to all kids, set = one kid's chore.
+  belongs_to :assigned_to, class_name: "ChildProfile", foreign_key: :child_profile_id,
+                           optional: true, inverse_of: :assigned_chores
   has_many :coin_transactions, dependent: :nullify
+
+  # Chores a kid should see: everything unassigned plus what's assigned to that kid,
+  # and never another kid's assigned chore.
+  scope :visible_to_kid, ->(child_id) {
+    where(child_profile_id: nil).or(where(child_profile_id: child_id))
+  }
 
   # Media (photo-only, ADR 0002): admin how-to images + the kid's proof images.
   # Both are multi-image: a chore can show several how-to shots and collect several proof shots.
