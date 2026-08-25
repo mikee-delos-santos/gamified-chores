@@ -87,6 +87,40 @@ export async function sendTestNotification(token: string): Promise<number> {
   return body.sent_to ?? 0;
 }
 
+// Re-tag an existing subscription with the bound kid (if present).
+// If a kid device enrolled before targeted push shipped, or its endpoint rotated and
+// re-subscribed without the bound-kid tag, it will receive all targeted chores.
+// This function silently re-subscribes to apply the correct child_profile_id tag,
+// so the backend sends targeted chores only to the right kid.
+// Best-effort: swallows all errors and never prompts the user.
+export async function resubscribeIfEnabled(): Promise<void> {
+  if (!isPushSupported()) return;
+
+  try {
+    // Only proceed if there's an existing subscription and permission is granted.
+    if (Notification.permission !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return;
+
+    // If there's no bound kid, leave the subscription untagged (admin/parent device).
+    const bound = await getBoundKid();
+    if (!bound) return;
+
+    // Re-POST with the bound kid to tag this subscription.
+    await apiFetch('/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({
+        subscription: sub.toJSON(),
+        child_profile_id: bound.id,
+      }),
+    });
+  } catch {
+    // Swallow errors; this is best-effort and must never affect the app.
+  }
+}
+
 export { API_URL };
 
 // VAPID keys are base64url; PushManager wants a Uint8Array.
