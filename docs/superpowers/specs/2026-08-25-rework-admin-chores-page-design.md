@@ -52,10 +52,11 @@ Web push permission can only be requested from a user gesture, so "automatic" me
 - On the first gesture of a fresh install — parent **login submit**, kid **PIN unlock** — if
   `permissionState() === 'default'`, fire the one permission request there. If `denied`, do nothing.
 
-`NotificationsCard` is removed from `admin/(tabs)/chores.tsx` and `kid/(tabs)/me.tsx`. The logic
-moves into a `usePushAutoEnroll()` hook (the silent-on-boot half) plus a one-line
-`maybeRequestOnGesture()` call wired into the login and PIN-unlock handlers. The admin "Send test"
-affordance moves to the Kids/settings area so a grown-up can still fire a test.
+`NotificationsCard` is deleted (removed from `admin/(tabs)/chores.tsx` and `kid/(tabs)/me.tsx`).
+The logic moves into a `usePushAutoEnroll()` hook (the silent-on-boot half) plus a one-line
+`requestNotificationsOnGesture()` call wired into the login and PIN-unlock handlers. The manual
+"Send test" button is dropped with the card; the `sendTestNotification` API stays available for a
+future placement if a grown-up needs to fire a test.
 
 ## Components
 

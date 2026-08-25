@@ -10,6 +10,7 @@ import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
 import { ChildProfile, listChildProfiles } from '@/lib/api';
 import { setBoundKid } from '@/lib/device-session';
+import { requestNotificationsOnGesture } from '@/lib/push';
 import { Color, Ink } from '@/theme/tokens';
 
 export default function KidProfiles() {
@@ -74,6 +75,9 @@ export default function KidProfiles() {
               <Pressable
                 onPress={async () => {
                   await setBoundKid({ id: item.id, name: item.name });
+                  // Fresh install: ask for notification permission once on this unlock tap. The
+                  // subscription is tagged to this kid so assigned-chore pushes reach only them.
+                  void requestNotificationsOnGesture();
                   router.replace('/(kid)/(tabs)/chores');
                 }}>
                 <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>

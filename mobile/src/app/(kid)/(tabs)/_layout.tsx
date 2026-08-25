@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/app-text';
+import { usePushAutoEnroll } from '@/hooks/use-push-auto-enroll';
 import { useRefreshOnPush } from '@/hooks/use-refresh-on-push';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
@@ -78,6 +79,8 @@ function KidTabBar({ state, navigation }: TabBarProps) {
 export default function KidTabsLayout() {
   // Hard-refresh the kid's screen whenever a chore-update push lands (web/PWA only).
   useRefreshOnPush();
+  // Silently re-subscribe for push on boot if already granted (no prompt).
+  usePushAutoEnroll();
   return (
     <Tabs
       screenOptions={{ headerShown: false }}

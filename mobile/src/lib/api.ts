@@ -141,9 +141,30 @@ export async function getMe(token: string): Promise<Admin> {
 
 // --- Chores (admin, Bearer token) ---
 
-export async function listChores(token: string): Promise<Chore[]> {
-  const res = await apiFetch('/chores', { headers: authHeaders(token) });
+export interface ListChoresOptions {
+  status?: ChoreStatus;
+  /** 1-based page for infinite scroll. Omit for page 1. Ignored when needsReview is set. */
+  page?: number;
+  per?: number;
+  /** Open chores that have proof attached (the Review queue). Server returns them unpaginated. */
+  needsReview?: boolean;
+}
+
+export async function listChores(token: string, opts: ListChoresOptions = {}): Promise<Chore[]> {
+  const q: string[] = [];
+  if (opts.status) q.push(`status=${opts.status}`);
+  if (opts.page != null) q.push(`page=${opts.page}`);
+  if (opts.per != null) q.push(`per=${opts.per}`);
+  if (opts.needsReview) q.push('needs_review=1');
+  const qs = q.length ? `?${q.join('&')}` : '';
+  const res = await apiFetch(`/chores${qs}`, { headers: authHeaders(token) });
   return json<Chore[]>(res);
+}
+
+/** Fetch a single chore by id (admin). Throws ApiError(404) if it isn't in the family. */
+export async function getChore(token: string, id: number): Promise<Chore> {
+  const res = await apiFetch(`/chores/${id}`, { headers: authHeaders(token) });
+  return json<Chore>(res);
 }
 
 export interface CreateChoreInput {
