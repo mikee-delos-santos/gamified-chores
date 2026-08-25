@@ -46,12 +46,18 @@ class ChoresController < ApplicationController
   end
 
   # POST /chores/:id/proof { proof_photos[], by } — kid attaches photos showing the chore is done.
-  # Photos append (a later submission adds to what's there). Unauthenticated (kids have no login);
-  # the admin sees them when awarding. `proof_photo` (singular) is still accepted for older clients.
+  # Requires at least one proof photo to be attached (either from the current request or already
+  # on the chore from a prior submission). Photos append (a later submission adds to what's there).
+  # Unauthenticated (kids have no login); the admin sees them when awarding.
+  # `proof_photo` (singular) is still accepted for older clients.
   def proof
     chore = Chore.find(params[:id])
     incoming = params[:proof_photos].presence || params[:proof_photo].presence
     chore.proof_photos.attach(incoming) if incoming
+    unless chore.proof_photos.attached?
+      return render json: { error: "a proof photo is required" },
+                    status: :unprocessable_entity
+    end
     if params[:child_profile_id].present?
       chore.proof_by_child = chore.family.child_profiles.find_by(id: params[:child_profile_id])
     end
