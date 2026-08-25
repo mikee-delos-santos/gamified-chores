@@ -131,7 +131,9 @@ export default function AdminChores() {
   const onEndReached = useCallback(() => {
     if (tab !== 'active' || loading || loadingMore || !hasMore) return;
     setLoadingMore(true);
-    loadActive(page + 1, false).finally(() => setLoadingMore(false));
+    loadActive(page + 1, false)
+      .catch(() => setError('Could not load more chores.'))
+      .finally(() => setLoadingMore(false));
   }, [tab, loading, loadingMore, hasMore, page, loadActive]);
 
   // Shared by both lists; only used to grab the scrollable DOM node for web pull-to-refresh.
