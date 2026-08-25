@@ -13,7 +13,7 @@ Rails.application.routes.draw do
   get "me" => "me#show" # protected; returns the current admin
 
   # Chores (admin-only)
-  resources :chores, only: [:index, :create, :update, :destroy] do
+  resources :chores, only: [:index, :show, :create, :update, :destroy] do
     member do
       post :complete
       post :proof # kid-facing photo proof upload
