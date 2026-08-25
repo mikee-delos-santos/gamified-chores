@@ -55,6 +55,7 @@ export default function AdminChores() {
 
   const [chores, setChores] = useState<Chore[]>([]);
   const [templates, setTemplates] = useState<ChoreTemplate[]>([]);
+  const [kids, setKids] = useState<ChildProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,8 @@ export default function AdminChores() {
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [recurring, setRecurring] = useState(false);
+  // Optional assignee for the new chore; null = open to any kid.
+  const [assignId, setAssignId] = useState<number | null>(null);
 
   // Award sheet + edit sheet
   const [target, setTarget] = useState<Chore | null>(null);
@@ -78,12 +81,14 @@ export default function AdminChores() {
     if (!token) return;
     setError(null);
     try {
-      const [choreList, templateList] = await Promise.all([
+      const [choreList, templateList, kidList] = await Promise.all([
         listChores(token),
         listChoreTemplates(token),
+        listChildProfiles(),
       ]);
       setChores(choreList);
       setTemplates(templateList);
+      setKids(kidList);
     } catch {
       setError('Could not load chores.');
     } finally {
@@ -130,7 +135,8 @@ export default function AdminChores() {
           await uploadTemplateHowToPhotos(token, template.id, newPhotos);
         }
       } else {
-        const chore = await createChore(token, input);
+        // Assignment only applies to one-time chores; templates are family-wide.
+        const chore = await createChore(token, { ...input, child_profile_id: assignId });
         if (newPhotos.length) {
           await uploadHowToPhotos(token, chore.id, newPhotos);
         }
@@ -140,6 +146,7 @@ export default function AdminChores() {
       setReward('');
       setNewPhotos([]);
       setRecurring(false);
+      setAssignId(null);
       await load();
     } catch {
       setError(recurring ? 'Could not create the template.' : 'Could not create the chore.');
@@ -203,6 +210,9 @@ export default function AdminChores() {
                 label={newPhotos.length ? `How-to photos (${newPhotos.length})` : 'Add how-to photos'}
                 onPress={addNewPhotos}
               />
+              {!recurring && kids.length > 0 ? (
+                <AssignPicker kids={kids} value={assignId} onChange={setAssignId} />
+              ) : null}
               <Pressable
                 onPress={() => setRecurring((v) => !v)}
                 hitSlop={6}
@@ -311,6 +321,7 @@ export default function AdminChores() {
 
       <EditChoreSheet
         chore={editTarget}
+        kids={kids}
         token={token}
         onClose={() => setEditTarget(null)}
         onDone={async () => {
@@ -611,13 +622,63 @@ function TemplateRow({
   );
 }
 
+// Pick which kid a chore is for. "Anyone" (null) leaves it open to all kids; a kid chip assigns
+// it to that one kid. Mirrors the "Who did it?" chip styling in the award sheet.
+function AssignPicker({
+  kids,
+  value,
+  onChange,
+}: {
+  kids: ChildProfile[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+}) {
+  function chip(on: boolean, label: string, key: string, onPress: () => void, avatar?: string) {
+    return (
+      <Pressable
+        key={key}
+        onPress={onPress}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingVertical: 7,
+          paddingHorizontal: 12,
+          borderRadius: Radius.pill,
+          borderWidth: 2,
+          borderColor: on ? Color.primary : Color.softBlue,
+          backgroundColor: on ? Color.primary : Color.card,
+        }}>
+        {avatar ? <Avatar name={avatar} size={24} onPrimary={on} /> : null}
+        <AppText size={13} weight={800} color={on ? Color.white : Color.navy}>
+          {label}
+        </AppText>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={{ gap: 8 }}>
+      <AppText size={13} weight={700} color={Ink.t60}>
+        Assign to
+      </AppText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {chip(value === null, 'Anyone', 'anyone', () => onChange(null))}
+        {kids.map((k) => chip(value === k.id, k.name, String(k.id), () => onChange(k.id), k.name))}
+      </View>
+    </View>
+  );
+}
+
 function EditChoreSheet({
   chore,
+  kids,
   token,
   onClose,
   onDone,
 }: {
   chore: Chore | null;
+  kids: ChildProfile[];
   token: string | null;
   onClose: () => void;
   onDone: () => void;
@@ -625,6 +686,7 @@ function EditChoreSheet({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [reward, setReward] = useState('');
+  const [assignId, setAssignId] = useState<number | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -636,6 +698,7 @@ function EditChoreSheet({
       setTitle(chore.title);
       setDescription(chore.description ?? '');
       setReward(String(chore.reward_coins));
+      setAssignId(chore.assigned_to?.id ?? null);
       setPendingPhotos([]);
       setErr(null);
     }, [chore]),
@@ -662,6 +725,7 @@ function EditChoreSheet({
         title: title.trim(),
         description: description.trim() || undefined,
         reward_coins: coins,
+        child_profile_id: assignId,
       });
       if (pendingPhotos.length) {
         await uploadHowToPhotos(token, chore.id, pendingPhotos);
@@ -703,6 +767,10 @@ function EditChoreSheet({
             value={reward}
             onChangeText={setReward}
           />
+
+          {kids.length > 0 ? (
+            <AssignPicker kids={kids} value={assignId} onChange={setAssignId} />
+          ) : null}
 
           <View style={{ gap: 8 }}>
             <AppText size={13} weight={700} color={Ink.t60}>

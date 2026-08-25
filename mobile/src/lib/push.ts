@@ -7,6 +7,7 @@
 import { Platform } from 'react-native';
 
 import { apiFetch, API_URL } from './api';
+import { getBoundKid } from './device-session';
 
 const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -59,9 +60,15 @@ export async function enableNotifications(): Promise<EnableResult> {
       });
     }
 
+    // On a kid device, tag the subscription with the bound kid so a chore assigned to that kid
+    // notifies only them (plus parents). Admin devices have no bound kid and stay untagged.
+    const bound = await getBoundKid();
     await apiFetch('/push/subscribe', {
       method: 'POST',
-      body: JSON.stringify({ subscription: sub.toJSON() }),
+      body: JSON.stringify({
+        subscription: sub.toJSON(),
+        ...(bound ? { child_profile_id: bound.id } : {}),
+      }),
     });
 
     return { ok: true };

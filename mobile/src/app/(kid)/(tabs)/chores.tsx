@@ -73,7 +73,7 @@ export default function KidChores() {
         return;
       }
       setName(bound.name);
-      const [profile, open] = await Promise.all([getChildProfile(bound.id), listOpenChores()]);
+      const [profile, open] = await Promise.all([getChildProfile(bound.id), listOpenChores(bound.id)]);
       setData(profile);
       setOpenChores(open);
       await maybeCelebrate(bound.id, profile);
