@@ -10,9 +10,22 @@ class FamilyController < ApplicationController
   end
 
   # PATCH /family/settings { peso_per_coin }  (admin) — set the coin -> peso rate.
+  # A real change pushes the new rate to every enrolled device in the family.
   def update_settings
-    current_family.update!(peso_per_coin: params.require(:peso_per_coin))
-    render json: settings_json(current_family)
+    family = current_family
+    old_rate = family.peso_per_coin
+    family.update!(peso_per_coin: params.require(:peso_per_coin))
+
+    if family.peso_per_coin != old_rate
+      PushNotifier.notify_family(
+        family,
+        title: "Coin rate updated",
+        body: "1 coin is now ₱#{format("%.2f", family.peso_per_coin)}",
+        url: "/",
+      )
+    end
+
+    render json: settings_json(family)
   end
 
   # POST /family/pin { pin }  (admin) — set or change the grown-up PIN.
