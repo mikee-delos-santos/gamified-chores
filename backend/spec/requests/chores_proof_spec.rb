@@ -21,9 +21,13 @@ RSpec.describe "POST /chores/:id/proof", type: :request do
     )
   end
 
+  let(:proof_image) do
+    Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/proof.png"), "image/png")
+  end
+
   describe "with child_profile_id param" do
     it "persists proof_by_child_id and returns proof_by in the JSON" do
-      post "/chores/#{chore.id}/proof", params: { child_profile_id: child.id, by: child.name }
+      post "/chores/#{chore.id}/proof", params: { proof_photos: [proof_image], child_profile_id: child.id, by: child.name }
 
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
@@ -34,16 +38,29 @@ RSpec.describe "POST /chores/:id/proof", type: :request do
     end
   end
 
-  describe "without child_profile_id param" do
-    it "leaves proof_by null and still returns 200" do
+  describe "rejects a submit with no proof photo" do
+    it "returns 422 and does not attach proof" do
       post "/chores/#{chore.id}/proof", params: { by: "A kid" }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      json = JSON.parse(response.body)
+      expect(json["error"]).to eq("a proof photo is required")
+
+      chore.reload
+      expect(chore.proof_photos.attached?).to be(false)
+    end
+  end
+
+  describe "with a proof photo but no child_profile_id" do
+    it "returns 200 and attaches the proof" do
+      post "/chores/#{chore.id}/proof", params: { proof_photos: [proof_image], by: "A kid" }
 
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
       expect(json["proof_by"]).to be_nil
 
       chore.reload
-      expect(chore.proof_by_child_id).to be_nil
+      expect(chore.proof_photos.attached?).to be(true)
     end
   end
 
