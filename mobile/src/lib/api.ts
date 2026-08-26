@@ -63,7 +63,8 @@ export interface Chore {
   status: ChoreStatus;
   grade: number | null;
   created_by: number | null;
-  completed_by: number | null;
+  // The kid awarded the chore (set at approval) — the reliable "who did it" for a Done card.
+  completed_by: KidRef | null;
   completed_at: string | null;
   how_to_photo_urls: string[];
   proof_photo_urls: string[];

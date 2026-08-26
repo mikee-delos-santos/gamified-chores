@@ -16,7 +16,9 @@ class ChoreSerializer
       status: chore.status,
       grade: chore.grade,
       created_by: chore.created_by_id,
-      completed_by: chore.completed_by_id,
+      # The kid who was awarded the chore (set at approval). This, not proof_by, is the reliable
+      # "who did it" for a completed card, so it carries the full color + photo ref.
+      completed_by: child_ref(chore.completed_by),
       completed_at: chore.completed_at,
       how_to_photo_urls: photo_urls(chore.how_to_photos),
       proof_photo_urls: proof_urls,
