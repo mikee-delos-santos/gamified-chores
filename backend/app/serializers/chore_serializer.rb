@@ -33,6 +33,12 @@ class ChoreSerializer
   end
 
   def child_ref(child)
-    child ? { id: child.id, name: child.name, color: child.color } : nil
+    return nil unless child
+
+    { id: child.id, name: child.name, color: child.color, photo_url: child_photo_url(child) }
+  end
+
+  def child_photo_url(child)
+    child.photo.attached? ? @url_for.call(child.photo) : nil
   end
 end

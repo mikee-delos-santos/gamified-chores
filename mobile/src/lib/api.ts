@@ -68,9 +68,17 @@ export interface Chore {
   how_to_photo_urls: string[];
   proof_photo_urls: string[];
   proof_photo_url: string | null; // first proof photo, kept for older clients
-  proof_by: { id: number; name: string; color: string | null } | null;
+  proof_by: KidRef | null;
   // The one kid this chore is assigned to, or null when it's open to any kid.
-  assigned_to: { id: number; name: string; color: string | null } | null;
+  assigned_to: KidRef | null;
+}
+
+/** A kid as referenced from a chore: identity plus their card color and avatar photo. */
+export interface KidRef {
+  id: number;
+  name: string;
+  color: string | null;
+  photo_url: string | null;
 }
 
 /** A reusable chore an admin posts on demand. No completion state. */
@@ -93,6 +101,7 @@ export interface ChildProfile {
   name: string;
   balance: number;
   color: string | null;
+  photo_url: string | null;
 }
 
 export interface CompletedChore {
@@ -148,6 +157,8 @@ export interface ListChoresOptions {
   per?: number;
   /** Open chores that have proof attached (the Review queue). Server returns them unpaginated. */
   needsReview?: boolean;
+  /** Narrow to chores a given kid did (proof_by). Used by the Done & archived filter. */
+  childProfileId?: number;
 }
 
 export async function listChores(token: string, opts: ListChoresOptions = {}): Promise<Chore[]> {
@@ -156,6 +167,7 @@ export async function listChores(token: string, opts: ListChoresOptions = {}): P
   if (opts.page != null) q.push(`page=${opts.page}`);
   if (opts.per != null) q.push(`per=${opts.per}`);
   if (opts.needsReview) q.push('needs_review=1');
+  if (opts.childProfileId != null) q.push(`child_profile_id=${opts.childProfileId}`);
   const qs = q.length ? `?${q.join('&')}` : '';
   const res = await apiFetch(`/chores${qs}`, { headers: authHeaders(token) });
   return json<Chore[]>(res);

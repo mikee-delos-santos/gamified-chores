@@ -15,6 +15,9 @@ class ChildProfile < ApplicationRecord
            inverse_of: :assigned_to,
            dependent: :nullify
 
+  # A single avatar photo shown on the kid's chore cards (seeded via chores:seed_kid_photos).
+  has_one_attached :photo
+
   validates :name, presence: true
 
   # Current balance = sum of every ledger entry for this child.

@@ -5,10 +5,11 @@ import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card, CoinChip } from '@/components/ui/card';
+import { KidBadge } from '@/components/ui/kid-badge';
 import { PhotoThumbs } from '@/components/ui/photo-thumbs';
 import { Pop } from '@/components/ui/pop';
 import { Screen } from '@/components/ui/screen';
-import { Chore, ChoreStatus, listChores } from '@/lib/api';
+import { ChildProfile, Chore, ChoreStatus, listChildProfiles, listChores } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { Color, Ink, Radius } from '@/theme/tokens';
 
@@ -27,6 +28,8 @@ export default function ChoreArchive() {
   const { token } = useSession();
 
   const [status, setStatus] = useState<ChoreStatus>('completed');
+  const [kids, setKids] = useState<ChildProfile[]>([]);
+  const [childId, setChildId] = useState<number | null>(null);
   const [chores, setChores] = useState<Chore[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -34,12 +37,24 @@ export default function ChoreArchive() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Kids power the "filter by kid" chips. Best-effort: if the fetch fails we just hide the row.
+  useEffect(() => {
+    listChildProfiles()
+      .then(setKids)
+      .catch(() => setKids([]));
+  }, []);
+
   const loadPage = useCallback(
     async (nextPage: number, replace: boolean) => {
       if (!token) return;
       setError(null);
       try {
-        const batch = await listChores(token, { status, page: nextPage, per: PER });
+        const batch = await listChores(token, {
+          status,
+          page: nextPage,
+          per: PER,
+          childProfileId: childId ?? undefined,
+        });
         setChores((prev) => (replace ? batch : [...prev, ...batch]));
         setHasMore(batch.length === PER);
         setPage(nextPage);
@@ -50,7 +65,7 @@ export default function ChoreArchive() {
         setLoadingMore(false);
       }
     },
-    [token, status],
+    [token, status, childId],
   );
 
   // Reset and load whenever the selected status changes.
@@ -106,6 +121,21 @@ export default function ChoreArchive() {
             );
           })}
         </View>
+
+        {kids.length > 0 ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 14 }}>
+            <KidChip label="All kids" on={childId === null} onPress={() => setChildId(null)} />
+            {kids.map((k) => (
+              <KidChip
+                key={k.id}
+                label={k.name}
+                on={childId === k.id}
+                onPress={() => setChildId(k.id)}
+                kid={k}
+              />
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <FlatList<Chore>
@@ -146,10 +176,25 @@ export default function ChoreArchive() {
   );
 }
 
+// Light wash of a kid's hex color, used as the Done card background (adds ~8% alpha to #RRGGBB).
+function tint(hex: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(hex) ? `${hex}14` : Color.card;
+}
+
 function ArchiveRow({ chore, onPress }: { chore: Chore; onPress: () => void }) {
+  const kid = chore.proof_by;
+  const accent = kid?.color ?? null;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.97 : 1 })}>
-      <Card style={{ padding: 14, gap: 12 }}>
+      <Card
+        style={{
+          padding: 14,
+          gap: 12,
+          // Color-code the card to the kid who did it: a bold left accent bar plus a light tint.
+          ...(accent
+            ? { borderLeftWidth: 6, borderLeftColor: accent, backgroundColor: tint(accent) }
+            : null),
+        }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ flex: 1, gap: 3 }}>
             <AppText size={16} weight={800} color={Color.navy}>
@@ -166,8 +211,59 @@ function ArchiveRow({ chore, onPress }: { chore: Chore; onPress: () => void }) {
 
         {chore.proof_photo_urls.length > 0 ? <PhotoThumbs urls={chore.proof_photo_urls} size={48} /> : null}
 
-        <StatusPill status={chore.status} grade={chore.grade} />
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 10,
+          }}>
+          <StatusPill status={chore.status} grade={chore.grade} />
+          {kid ? (
+            <View style={{ alignItems: 'center', gap: 3 }}>
+              <KidBadge name={kid.name} color={kid.color} photoUrl={kid.photo_url} size={46} />
+              <AppText size={11} weight={800} color={accent ?? Color.navy}>
+                {kid.name}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
       </Card>
+    </Pressable>
+  );
+}
+
+function KidChip({
+  label,
+  on,
+  onPress,
+  kid,
+}: {
+  label: string;
+  on: boolean;
+  onPress: () => void;
+  kid?: ChildProfile;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: Radius.pill,
+        borderWidth: 2,
+        borderColor: on ? Color.primary : Color.softBlue,
+        backgroundColor: on ? Color.primary : Color.card,
+      }}>
+      {kid ? (
+        <KidBadge name={kid.name} color={kid.color} photoUrl={kid.photo_url} size={24} ring={2} shadow={false} />
+      ) : null}
+      <AppText size={13} weight={800} color={on ? Color.white : Color.navy}>
+        {label}
+      </AppText>
     </Pressable>
   );
 }
