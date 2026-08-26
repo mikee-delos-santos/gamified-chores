@@ -4,11 +4,13 @@
 # not configured (e.g. local dev without keys) this is a safe no-op. Sending is best-effort and
 # never raises into the caller: a dead subscription (404/410) is pruned, other errors are logged.
 class PushNotifier
-  def self.notify_family(family, title:, body:, url: "/")
+  # `type` is an optional client hint carried in the payload (e.g. "app-update") so the service
+  # worker can treat some pushes differently from a normal chore update.
+  def self.notify_family(family, title:, body:, url: "/", type: nil)
     return unless configured?
     return if family.nil?
 
-    deliver_all(family.push_subscriptions, title: title, body: body, url: url)
+    deliver_all(family.push_subscriptions, title: title, body: body, url: url, type: type)
   end
 
   # Notify about a chore, honoring its optional assignee. An assigned chore only reaches the
@@ -25,9 +27,11 @@ class PushNotifier
     deliver_all(subs, title: title, body: body, url: url)
   end
 
-  def self.deliver_all(subscriptions, title:, body:, url:)
-    payload = { title: title, body: body, url: url }.to_json
-    subscriptions.find_each { |sub| deliver(sub, payload) }
+  def self.deliver_all(subscriptions, title:, body:, url:, type: nil)
+    payload = { title: title, body: body, url: url }
+    payload[:type] = type if type.present?
+    json = payload.to_json
+    subscriptions.find_each { |sub| deliver(sub, json) }
   end
 
   def self.configured?

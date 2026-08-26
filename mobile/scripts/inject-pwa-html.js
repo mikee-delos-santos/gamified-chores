@@ -15,6 +15,16 @@ if (!fs.existsSync(indexPath)) {
   process.exit(1);
 }
 
+// Write the deployed build id to a static, same-origin file the app polls to detect a new
+// version (see use-app-update.ts). Same id that expo inlined as EXPO_PUBLIC_BUILD_ID, so a
+// running tab compares its baked-in id against this and prompts a refresh when they differ.
+const buildId = process.env.EXPO_PUBLIC_BUILD_ID || '';
+fs.writeFileSync(
+  path.join(__dirname, '..', 'dist', 'version.json'),
+  JSON.stringify({ buildId }),
+);
+console.log(`[inject-pwa-html] Wrote version.json (buildId: ${buildId || 'unset'}).`);
+
 let html = fs.readFileSync(indexPath, 'utf8');
 
 // Idempotent: skip if we already patched this file.

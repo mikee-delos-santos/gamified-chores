@@ -77,8 +77,10 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     (async () => {
       await self.registration.showNotification(title, options);
-      // Every push here is a chore update. Tell any open tab (e.g. a kid staring at the
-      // screen) to hard-refresh so its chores and balance are never stale.
+      // An app-update push must NOT hard-refresh an open tab (a kid could be mid proof upload);
+      // the in-app update banner handles open tabs. Only chore updates auto-refresh so a kid
+      // staring at the screen never sees stale chores or balance.
+      if (data.type === 'app-update') return;
       const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of all) {
         client.postMessage({ type: 'chore-update', url: options.data.url });

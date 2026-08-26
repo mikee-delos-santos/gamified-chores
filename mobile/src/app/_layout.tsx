@@ -12,6 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { UpdateBanner } from '@/components/ui/update-banner';
 import { SessionProvider } from '@/lib/session';
 
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +40,7 @@ export default function RootLayout() {
           <Stack.Screen name="(admin)" />
           <Stack.Screen name="(kid)" />
         </Stack>
+        <UpdateBanner />
       </ThemeProvider>
     </SessionProvider>
   );

@@ -4,7 +4,7 @@
 # subscription to the family. This is a single-family MVP, so subscriptions attach to the one
 # family. test is admin-only and fires a family-wide notification for verification.
 class PushController < ApplicationController
-  before_action :authenticate_admin!, only: [:test]
+  before_action :authenticate_admin!, only: [:test, :app_update]
 
   # POST /push/subscribe  { subscription: { endpoint, keys: { p256dh, auth } } }
   def subscribe
@@ -40,6 +40,20 @@ class PushController < ApplicationController
       title: "Faye Coins",
       body: "Test notification — push is working!",
       url: "/",
+    )
+    render json: { ok: true, sent_to: current_family.push_subscriptions.count }
+  end
+
+  # POST /push/app_update  (admin) — tell every device a new app version is out and to refresh.
+  # The `type: "app-update"` hint lets the service worker show the notice without force-reloading
+  # an open tab (the in-app update banner handles open tabs; this reaches closed ones).
+  def app_update
+    PushNotifier.notify_family(
+      current_family,
+      title: "Faye Coins updated",
+      body: "A new version is ready. Close and reopen the app to refresh.",
+      url: "/",
+      type: "app-update",
     )
     render json: { ok: true, sent_to: current_family.push_subscriptions.count }
   end
