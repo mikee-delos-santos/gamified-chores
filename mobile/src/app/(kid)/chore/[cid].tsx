@@ -68,8 +68,12 @@ export default function KidChoreDetail() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [open, kid] = await Promise.all([listOpenChores(), getBoundKid()]);
+      // Fetch the bound kid first so the open-chores list is scoped to this device's kid.
+      // Without the id the backend returns only unassigned chores, so a chore assigned to
+      // this kid would be missing here and the screen would show "not available".
+      const kid = await getBoundKid();
       setBoundKid(kid);
+      const open = await listOpenChores(kid?.id ?? undefined);
       const found = open.find((c) => c.id === choreId) ?? null;
       setChore(found);
       if (found && found.proof_photo_urls.length > 0) setSent(true);
