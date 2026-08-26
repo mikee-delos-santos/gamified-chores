@@ -87,6 +87,37 @@ RSpec.describe "GET /chores (index + show)", type: :request do
     end
   end
 
+  describe "completed_by is a full kid ref and drives the kid filter" do
+    let!(:awarded) { make_chore(title: "Julia awarded", status: :open) }
+
+    before do
+      child.update!(color: "#EC4899")
+      child.photo.attach(
+        Rack::Test::UploadedFile.new(StringIO.new("img"), "image/jpeg", original_filename: "julia.jpg")
+      )
+      # Award through the real service: this sets completed_by and leaves proof_by nil, exactly
+      # the state that hid the badge on Done cards (PC-80).
+      Chores::Approver.call(chore: awarded, child: child, grade: 5)
+    end
+
+    it "serializes completed_by with color and photo_url while proof_by stays nil" do
+      get "/chores/#{awarded.id}", headers: auth_headers(admin)
+
+      body = JSON.parse(response.body)
+      expect(body["proof_by"]).to be_nil
+      expect(body["completed_by"]).to include("id" => child.id, "name" => "Julia", "color" => "#EC4899")
+      expect(body["completed_by"]["photo_url"]).to be_present
+    end
+
+    it "matches the kid filter via completed_by" do
+      get "/chores", params: { child_profile_id: child.id, status: "completed" },
+                      headers: auth_headers(admin)
+
+      titles = JSON.parse(response.body).map { |c| c["title"] }
+      expect(titles).to include("Julia awarded")
+    end
+  end
+
   describe "proof_by carries the kid's color and photo" do
     let!(:done) { make_chore(title: "With proof-by", status: :completed) }
 

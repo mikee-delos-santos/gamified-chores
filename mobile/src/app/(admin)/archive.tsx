@@ -182,7 +182,9 @@ function tint(hex: string): string {
 }
 
 function ArchiveRow({ chore, onPress }: { chore: Chore; onPress: () => void }) {
-  const kid = chore.proof_by;
+  // Who did it: the awarded kid for a completed chore, else the proof submitter (rejected/expired
+  // chores that were never awarded). completed_by is the reliable signal on Done cards.
+  const kid = chore.completed_by ?? chore.proof_by;
   const accent = kid?.color ?? null;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.97 : 1 })}>

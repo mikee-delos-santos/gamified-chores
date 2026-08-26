@@ -11,7 +11,12 @@ class ChoresController < ApplicationController
   def index
     chores = current_family.chores.order(created_at: :desc)
     chores = chores.where(status: params[:status]) if valid_status?(params[:status])
-    chores = chores.where(proof_by_child_id: params[:child_profile_id]) if params[:child_profile_id].present?
+    if params[:child_profile_id].present?
+      # Match the same "who did it" the card shows: the awarded kid (completed_by) for done
+      # chores, or the proof submitter (proof_by) for ones that were never awarded.
+      chores = chores.where(completed_by_id: params[:child_profile_id])
+                     .or(chores.where(proof_by_child_id: params[:child_profile_id]))
+    end
 
     if truthy?(params[:needs_review])
       chores = chores.where(status: :open).with_attached_proof_photos.select { |c| c.proof_photos.attached? }
