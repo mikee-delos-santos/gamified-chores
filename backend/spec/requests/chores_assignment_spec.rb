@@ -21,7 +21,8 @@ RSpec.describe "Chore assignment", type: :request do
 
       expect(response).to have_http_status(:created)
       json = JSON.parse(response.body)
-      expect(json["assigned_to"]).to eq("id" => julia.id, "name" => "Julia", "color" => nil)
+      expect(json["assigned_to"]).to eq("id" => julia.id, "name" => "Julia", "color" => nil,
+                                        "photo_url" => nil)
       expect(Chore.last.child_profile_id).to eq(julia.id)
     end
 

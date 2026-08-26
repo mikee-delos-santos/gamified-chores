@@ -59,6 +59,54 @@ RSpec.describe "GET /chores (index + show)", type: :request do
     end
   end
 
+  describe "child_profile_id filter (who did it)" do
+    let!(:cyrus) { ChildProfile.create!(family: family, name: "Cyrus") }
+    let!(:julia_done) { make_chore(title: "Julia did", status: :completed) }
+    let!(:cyrus_done) { make_chore(title: "Cyrus did", status: :completed) }
+
+    before do
+      julia_done.update!(proof_by_child: child)
+      cyrus_done.update!(proof_by_child: cyrus)
+    end
+
+    it "returns only the chores that kid did" do
+      get "/chores", params: { child_profile_id: child.id }, headers: auth_headers(admin)
+
+      titles = JSON.parse(response.body).map { |c| c["title"] }
+      expect(titles).to contain_exactly("Julia did")
+    end
+
+    it "combines with the status filter" do
+      make_chore(title: "Julia open", status: :open).update!(proof_by_child: child)
+
+      get "/chores", params: { child_profile_id: child.id, status: "completed" },
+                      headers: auth_headers(admin)
+
+      titles = JSON.parse(response.body).map { |c| c["title"] }
+      expect(titles).to contain_exactly("Julia did")
+    end
+  end
+
+  describe "proof_by carries the kid's color and photo" do
+    let!(:done) { make_chore(title: "With proof-by", status: :completed) }
+
+    before do
+      child.update!(color: "#EC4899")
+      child.photo.attach(
+        Rack::Test::UploadedFile.new(StringIO.new("img"), "image/jpeg", original_filename: "julia.jpg")
+      )
+      done.update!(proof_by_child: child)
+    end
+
+    it "includes proof_by.color and proof_by.photo_url" do
+      get "/chores/#{done.id}", headers: auth_headers(admin)
+
+      proof_by = JSON.parse(response.body)["proof_by"]
+      expect(proof_by).to include("name" => "Julia", "color" => "#EC4899")
+      expect(proof_by["photo_url"]).to be_present
+    end
+  end
+
   describe "needs_review=1" do
     let!(:plain_open) { make_chore(title: "No proof", status: :open) }
     let!(:with_proof) { make_chore(title: "Has proof", status: :open) }

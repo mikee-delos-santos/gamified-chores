@@ -3,13 +3,15 @@ class ChoresController < ApplicationController
   # open + proof are kid-facing (kids have no login); everything else is admin-only.
   before_action :authenticate_admin!, except: [:proof, :open]
 
-  # GET /chores?status=&page=&per=&needs_review=
-  # Newest first. `status` filters by lifecycle state. `needs_review=1` returns the open chores
-  # that have proof attached (the Review queue) unpaginated, so its badge count stays exact.
-  # Otherwise the list is paginated with page/per for infinite scroll.
+  # GET /chores?status=&page=&per=&needs_review=&child_profile_id=
+  # Newest first. `status` filters by lifecycle state. `child_profile_id` narrows to chores a
+  # given kid did (proof_by_child), used by the Done & archived filter. `needs_review=1` returns
+  # the open chores that have proof attached (the Review queue) unpaginated, so its badge count
+  # stays exact. Otherwise the list is paginated with page/per for infinite scroll.
   def index
     chores = current_family.chores.order(created_at: :desc)
     chores = chores.where(status: params[:status]) if valid_status?(params[:status])
+    chores = chores.where(proof_by_child_id: params[:child_profile_id]) if params[:child_profile_id].present?
 
     if truthy?(params[:needs_review])
       chores = chores.where(status: :open).with_attached_proof_photos.select { |c| c.proof_photos.attached? }
