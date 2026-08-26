@@ -12,8 +12,27 @@ RSpec.describe "POST /push/app_update", type: :request do
     { "Authorization" => "Bearer #{token}" }
   end
 
-  it "requires an admin token" do
+  it "rejects a request with neither an admin token nor a deploy secret" do
     post "/push/app_update"
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it "accepts the deploy hook's shared secret without a JWT" do
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("DEPLOY_HOOK_SECRET").and_return("s3cret")
+    expect(PushNotifier).to receive(:notify_family).with(family, hash_including(type: "app-update"))
+
+    post "/push/app_update", headers: { "X-Deploy-Secret" => "s3cret" }
+
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "rejects a wrong deploy secret" do
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("DEPLOY_HOOK_SECRET").and_return("s3cret")
+
+    post "/push/app_update", headers: { "X-Deploy-Secret" => "nope" }
+
     expect(response).to have_http_status(:unauthorized)
   end
 

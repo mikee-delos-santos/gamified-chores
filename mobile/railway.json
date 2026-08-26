@@ -5,6 +5,7 @@
     "buildCommand": "npm run build:web"
   },
   "deploy": {
+    "preDeployCommand": "node scripts/notify-deploy.js",
     "startCommand": "npx serve -s dist -l $PORT",
     "restartPolicyType": "ON_FAILURE"
   }
