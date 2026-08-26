@@ -4,7 +4,10 @@
 # subscription to the family. This is a single-family MVP, so subscriptions attach to the one
 # family. test is admin-only and fires a family-wide notification for verification.
 class PushController < ApplicationController
-  before_action :authenticate_admin!, only: [:test, :app_update]
+  before_action :authenticate_admin!, only: [:test]
+  # app_update is called both by an admin (JWT) and by the deploy hook (shared secret), so it
+  # has its own authorization that accepts either.
+  before_action :authorize_app_update!, only: [:app_update]
 
   # POST /push/subscribe  { subscription: { endpoint, keys: { p256dh, auth } } }
   def subscribe
@@ -44,17 +47,32 @@ class PushController < ApplicationController
     render json: { ok: true, sent_to: current_family.push_subscriptions.count }
   end
 
-  # POST /push/app_update  (admin) — tell every device a new app version is out and to refresh.
-  # The `type: "app-update"` hint lets the service worker show the notice without force-reloading
-  # an open tab (the in-app update banner handles open tabs; this reaches closed ones).
+  # POST /push/app_update  — tell every device a new app version is out and to refresh.
+  # Called by an admin (JWT) or by the Railway deploy hook (X-Deploy-Secret). The
+  # `type: "app-update"` hint lets the service worker show the notice without force-reloading an
+  # open tab (the in-app update banner handles open tabs; this reaches closed ones).
   def app_update
+    family = current_family || Family.first
+    return render json: { error: "no family yet" }, status: :unprocessable_entity if family.nil?
+
     PushNotifier.notify_family(
-      current_family,
+      family,
       title: "Faye Coins updated",
       body: "A new version is ready. Close and reopen the app to refresh.",
       url: "/",
       type: "app-update",
     )
-    render json: { ok: true, sent_to: current_family.push_subscriptions.count }
+    render json: { ok: true, sent_to: family.push_subscriptions.count }
+  end
+
+  private
+
+  # Allow either a matching deploy secret (server-to-server hook) or a valid admin JWT.
+  def authorize_app_update!
+    secret = ENV["DEPLOY_HOOK_SECRET"].to_s
+    provided = request.headers["X-Deploy-Secret"].to_s
+    return if secret.present? && ActiveSupport::SecurityUtils.secure_compare(secret, provided)
+
+    authenticate_admin!
   end
 end
