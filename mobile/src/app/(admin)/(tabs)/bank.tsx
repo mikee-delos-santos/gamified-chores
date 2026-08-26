@@ -203,7 +203,7 @@ export default function AdminBank() {
                 <TextField
                   value={rate}
                   onChangeText={setRate}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   placeholder="2.50"
                   style={{ flex: 1 }}
                 />
