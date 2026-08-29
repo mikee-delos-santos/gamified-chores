@@ -47,17 +47,44 @@ class ChoresController < ApplicationController
     render json: chores.map { |chore| chore_json(chore) }
   end
 
+  # POST /chores. Normally creates an open chore. If award_to (a child_profile_id) is present, the
+  # parent is rewarding on the spot ("parent-initiated proof"): the chore is created and awarded in
+  # one transaction, skipping the open->proof->review loop. grade defaults to 5 (full coins); any
+  # proof_photos[] are stored on the chore but don't run through the kid proof flow (no kid push).
   def create
-    chore = Chores::Creator.call(
-      family: current_family,
-      created_by: current_user,
-      title: chore_params[:title],
-      description: chore_params[:description],
-      reward_coins: chore_params[:reward_coins],
-      assignee: params.key?(:child_profile_id) ? assignee : nil,
-      how_to_photos: params[:how_to_photos],
-    )
+    award_child = params[:award_to].present? ? current_family.child_profiles.find(params[:award_to]) : nil
+
+    if award_child
+      grade = params.key?(:grade) ? params[:grade].to_i : 5
+      chore = ActiveRecord::Base.transaction do
+        c = Chores::Creator.call(
+          family: current_family,
+          created_by: current_user,
+          title: chore_params[:title],
+          description: chore_params[:description],
+          reward_coins: chore_params[:reward_coins],
+          assignee: params.key?(:child_profile_id) ? assignee : nil,
+          how_to_photos: params[:how_to_photos],
+          notify: false,
+        )
+        c.proof_photos.attach(params[:proof_photos]) if params[:proof_photos].present?
+        Chores::Approver.call(chore: c, child: award_child, grade: grade)
+        c
+      end
+    else
+      chore = Chores::Creator.call(
+        family: current_family,
+        created_by: current_user,
+        title: chore_params[:title],
+        description: chore_params[:description],
+        reward_coins: chore_params[:reward_coins],
+        assignee: params.key?(:child_profile_id) ? assignee : nil,
+        how_to_photos: params[:how_to_photos],
+      )
+    end
     render json: chore_json(chore), status: :created
+  rescue Chores::Approver::BadGrade => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # PATCH /chores/:id { title, description, reward_coins, child_profile_id, how_to_photos[] }.

@@ -281,6 +281,12 @@ export default function AdminChoreDetail() {
                 </View>
               ) : null}
 
+              {chore.proof_photo_urls.length === 0 ? (
+                <AppText size={12} weight={700} color={Ink.t55}>
+                  No proof photo - you&apos;re rewarding without one.
+                </AppText>
+              ) : null}
+
               {awardError ? (
                 <AppText size={13} weight={700} color="#c8452f">
                   {awardError}
