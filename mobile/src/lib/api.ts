@@ -281,8 +281,9 @@ export async function rejectChore(token: string, id: number): Promise<Chore> {
 // --- Photo uploads (multipart) ---
 // Turn local image URIs (from expo-image-picker) into a multipart body. On web a URI is a
 // blob: URL we fetch back into a Blob; on native, RN's FormData accepts a {uri,name,type} file.
-async function imageFormData(field: string, uris: string[]): Promise<FormData> {
-  const form = new FormData();
+// Append image files to a form under `field` (an array field like 'proof_photos[]'), handling the
+// web-blob vs React Native file-descriptor difference.
+async function appendImages(form: FormData, field: string, uris: string[]): Promise<void> {
   for (let i = 0; i < uris.length; i += 1) {
     if (Platform.OS === 'web') {
       const blob = await fetch(uris[i]).then((r) => r.blob());
@@ -292,7 +293,41 @@ async function imageFormData(field: string, uris: string[]): Promise<FormData> {
       form.append(field, { uri: uris[i], name: `photo-${i}.jpg`, type: 'image/jpeg' } as unknown as Blob);
     }
   }
+}
+
+async function imageFormData(field: string, uris: string[]): Promise<FormData> {
+  const form = new FormData();
+  await appendImages(form, field, uris);
   return form;
+}
+
+export interface CreateAndRewardInput extends CreateChoreInput {
+  // The kid to reward on the spot, and the star grade (1-5, full = 5).
+  award_to: number;
+  grade: number;
+  howToPhotos?: string[];
+  proofPhotos?: string[];
+}
+
+// Parent-initiated proof: create a chore and reward a kid in one multipart request. The chore is
+// created already completed (no open->proof->review loop). Optional how-to/proof photos ride along.
+export async function createAndRewardChore(token: string, input: CreateAndRewardInput): Promise<Chore> {
+  const form = new FormData();
+  form.append('title', input.title);
+  if (input.description) form.append('description', input.description);
+  form.append('reward_coins', String(input.reward_coins));
+  if (input.child_profile_id != null) form.append('child_profile_id', String(input.child_profile_id));
+  form.append('award_to', String(input.award_to));
+  form.append('grade', String(input.grade));
+  if (input.howToPhotos?.length) await appendImages(form, 'how_to_photos[]', input.howToPhotos);
+  if (input.proofPhotos?.length) await appendImages(form, 'proof_photos[]', input.proofPhotos);
+  const res = await fetch(`${API_URL}/chores`, {
+    method: 'POST',
+    headers: authHeaders(token), // no Content-Type: runtime sets the multipart boundary
+    body: form,
+  });
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
+  return json<Chore>(res);
 }
 
 /** Attach one or more admin how-to photos to a chore (multipart PATCH). */

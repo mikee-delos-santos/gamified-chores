@@ -27,6 +27,7 @@ import {
   Chore,
   ChoreTemplate,
   completeChore,
+  createAndRewardChore,
   createChore,
   createChoreTemplate,
   deleteChore,
@@ -47,6 +48,13 @@ import { Color, Ink, Radius } from '@/theme/tokens';
 // award = grade/5 × reward, rounded to 2 decimals for display.
 function awardFor(grade: number, reward: number): number {
   return Math.round((grade / 5) * reward * 100) / 100;
+}
+
+// Label for the shared photo picker: proof shots when rewarding on the spot, how-to guidance
+// otherwise.
+function photoButtonLabel(rewarding: boolean, count: number): string {
+  if (rewarding) return count ? `Proof photos (${count})` : 'Add proof photos';
+  return count ? `How-to photos (${count})` : 'Add how-to photos';
 }
 
 const PER = 20;
@@ -79,6 +87,11 @@ export default function AdminChores() {
   const [creating, setCreating] = useState(false);
   // Optional assignee for a new one-off chore; null = open to any kid.
   const [assignId, setAssignId] = useState<number | null>(null);
+  // Parent-initiated proof: reward a kid the moment the chore is created (no proof needed).
+  const [rewardNow, setRewardNow] = useState(false);
+  const [rewardChildId, setRewardChildId] = useState<number | null>(null);
+  const [rewardGrading, setRewardGrading] = useState(false);
+  const [rewardGrade, setRewardGrade] = useState(5);
 
   // Award sheet + edit sheet
   const [target, setTarget] = useState<Chore | null>(null);
@@ -151,6 +164,12 @@ export default function AdminChores() {
       return;
     }
     const isRecurring = tab === 'recurring';
+    // Reward-now is only for one-off active chores, and needs a kid picked.
+    const rewarding = !isRecurring && rewardNow;
+    if (rewarding && rewardChildId == null) {
+      setError('Pick which kid to reward.');
+      return;
+    }
     setCreating(true);
     setError(null);
     try {
@@ -164,6 +183,15 @@ export default function AdminChores() {
         if (newPhotos.length) {
           await uploadTemplateHowToPhotos(token, template.id, newPhotos);
         }
+      } else if (rewarding) {
+        // Create the chore already completed and awarded; the attached photos are the proof.
+        await createAndRewardChore(token, {
+          ...input,
+          child_profile_id: assignId,
+          award_to: rewardChildId as number,
+          grade: rewardGrading ? rewardGrade : 5,
+          proofPhotos: newPhotos,
+        });
       } else {
         // Assignment only applies to one-time chores; templates are family-wide.
         const chore = await createChore(token, { ...input, child_profile_id: assignId });
@@ -176,6 +204,10 @@ export default function AdminChores() {
       setReward('');
       setNewPhotos([]);
       setAssignId(null);
+      setRewardNow(false);
+      setRewardChildId(null);
+      setRewardGrading(false);
+      setRewardGrade(5);
       await load();
     } catch {
       setError(isRecurring ? 'Could not create the template.' : 'Could not create the chore.');
@@ -222,11 +254,31 @@ export default function AdminChores() {
         />
         {newPhotos.length > 0 ? <PhotoThumbs urls={newPhotos} size={48} /> : null}
         <SecondaryButton
-          label={newPhotos.length ? `How-to photos (${newPhotos.length})` : 'Add how-to photos'}
+          label={photoButtonLabel(rewardNow && tab === 'active', newPhotos.length)}
           onPress={addNewPhotos}
         />
         {tab === 'active' && kids.length > 0 ? (
           <AssignPicker kids={kids} value={assignId} onChange={setAssignId} />
+        ) : null}
+        {tab === 'active' && kids.length > 0 ? (
+          <RewardSection
+            enabled={rewardNow}
+            onToggle={() => {
+              setError(null);
+              setRewardNow((on) => !on);
+            }}
+            kids={kids}
+            childId={rewardChildId}
+            onPickChild={setRewardChildId}
+            grading={rewardGrading}
+            onToggleGrading={() => {
+              setRewardGrading((g) => !g);
+              setRewardGrade(5);
+            }}
+            grade={rewardGrade}
+            onSetGrade={setRewardGrade}
+            reward={Number(reward) || 0}
+          />
         ) : null}
         {creating ? (
           <View
@@ -242,7 +294,13 @@ export default function AdminChores() {
           </View>
         ) : (
           <PrimaryButton
-            label={tab === 'recurring' ? 'Save recurring chore' : 'Add chore'}
+            label={
+              tab === 'recurring'
+                ? 'Save recurring chore'
+                : rewardNow
+                  ? 'Add & reward'
+                  : 'Add chore'
+            }
             onPress={onCreate}
           />
         )}
@@ -770,6 +828,137 @@ function AssignPicker({
   );
 }
 
+// Parent-initiated proof: a toggle that, when on, reveals a kid picker and a full-coins/grade
+// control so a new chore is rewarded the moment it's created (the kid had no phone to submit proof).
+function RewardSection({
+  enabled,
+  onToggle,
+  kids,
+  childId,
+  onPickChild,
+  grading,
+  onToggleGrading,
+  grade,
+  onSetGrade,
+  reward,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  kids: ChildProfile[];
+  childId: number | null;
+  onPickChild: (id: number) => void;
+  grading: boolean;
+  onToggleGrading: () => void;
+  grade: number;
+  onSetGrade: (n: number) => void;
+  reward: number;
+}) {
+  return (
+    <View style={{ gap: 10 }}>
+      <Pressable
+        onPress={onToggle}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderRadius: Radius.card,
+          borderWidth: 2,
+          borderColor: enabled ? Color.primary : Color.softBlue,
+          backgroundColor: enabled ? Color.primary : Color.card,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+        }}>
+        <AppText size={14} weight={800} color={enabled ? Color.white : Color.navy}>
+          Reward a kid now
+        </AppText>
+        <View
+          style={{
+            width: 46,
+            height: 26,
+            borderRadius: 13,
+            backgroundColor: enabled ? Color.white : Color.softBlue,
+            padding: 3,
+            alignItems: enabled ? 'flex-end' : 'flex-start',
+          }}>
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: enabled ? Color.primary : Color.dashed,
+            }}
+          />
+        </View>
+      </Pressable>
+
+      {enabled ? (
+        <>
+          <View style={{ gap: 8 }}>
+            <AppText size={13} weight={700} color={Ink.t60}>
+              Who did it?
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {kids.map((k) => {
+                const on = childId === k.id;
+                return (
+                  <Pressable
+                    key={k.id}
+                    onPress={() => onPickChild(k.id)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingVertical: 7,
+                      paddingHorizontal: 12,
+                      borderRadius: Radius.pill,
+                      borderWidth: 2,
+                      borderColor: on ? Color.primary : Color.softBlue,
+                      backgroundColor: on ? Color.primary : Color.card,
+                    }}>
+                    <Avatar name={k.name} size={24} onPrimary={on} />
+                    <AppText size={13} weight={800} color={on ? Color.white : Color.navy}>
+                      {k.name}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {grading ? (
+            <View style={{ gap: 8 }}>
+              <AppText size={13} weight={700} color={Ink.t60}>
+                How well?
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable key={n} onPress={() => onSetGrade(n)} hitSlop={4}>
+                    <Star
+                      size={30}
+                      color={n <= grade ? Color.coinGold : Color.dashed}
+                      fill={n <= grade ? Color.coinGold : 'transparent'}
+                      strokeWidth={2}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+              <AppText size={13} weight={700} color={Ink.t55} tabular>
+                Earns {fmtCoins(awardFor(grade, reward))} of {fmtCoins(reward)} coins
+              </AppText>
+            </View>
+          ) : null}
+
+          <Pressable onPress={onToggleGrading} hitSlop={6} style={{ alignSelf: 'flex-start' }}>
+            <AppText size={13} weight={800} color={Color.primary}>
+              {grading ? 'Give full coins instead' : 'Grade instead'}
+            </AppText>
+          </Pressable>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 function EditChoreSheet({
   chore,
   kids,
@@ -1033,6 +1222,12 @@ function AwardSheet({
               Earns {fmtCoins(preview)} of {fmtCoins(chore.reward_coins)} coins
             </AppText>
           </View>
+
+          {chore.proof_photo_urls.length === 0 ? (
+            <AppText size={12} weight={700} color={Ink.t55}>
+              No proof photo - you&apos;re rewarding without one.
+            </AppText>
+          ) : null}
 
           {err ? (
             <AppText size={13} weight={700} color="#c8452f">
