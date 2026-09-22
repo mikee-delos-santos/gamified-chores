@@ -1,0 +1,16 @@
+# Solid Queue recurring tasks (DB-backed, no Redis). These only run when the Solid Queue
+# supervisor runs; in production it runs inside Puma via SOLID_QUEUE_IN_PUMA=true.
+#
+# Cron is evaluated in the server clock (UTC on Railway). The Philippines is a fixed GMT+8
+# with no daylight saving, so the UTC times below map cleanly to Manila:
+#   Sunday 15:00 UTC == Sunday 23:00 Manila
+#   16:00 UTC        == 00:00 Manila (next day)
+# Each job also derives the Manila date itself, so it stays correct if firing drifts.
+
+production:
+  generate_weekly_rates:
+    class: GenerateWeeklyRatesJob
+    schedule: "0 15 * * 0"
+  apply_daily_rate:
+    class: ApplyDailyRateJob
+    schedule: "0 16 * * *"

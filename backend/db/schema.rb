@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_25_120001) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -129,6 +129,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_120001) do
     t.index ["family_id"], name: "index_push_subscriptions_on_family_id"
   end
 
+  create_table "scheduled_exchange_rates", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "family_id", null: false
+    t.date "on_date", null: false
+    t.decimal "peso_per_coin", precision: 10, scale: 2, null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "on_date"], name: "index_scheduled_exchange_rates_on_family_id_and_on_date", unique: true
+    t.index ["family_id"], name: "index_scheduled_exchange_rates_on_family_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
@@ -157,5 +167,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_120001) do
   add_foreign_key "coin_transactions", "chores"
   add_foreign_key "push_subscriptions", "child_profiles"
   add_foreign_key "push_subscriptions", "families"
+  add_foreign_key "scheduled_exchange_rates", "families"
   add_foreign_key "users", "families"
 end
