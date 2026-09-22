@@ -6,10 +6,11 @@ import { AppText } from '@/components/ui/app-text';
 import { PrimaryButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CoinIcon } from '@/components/ui/coin-icon';
+import { RateTrendCard } from '@/components/ui/rate-trend-card';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
-import { CoinBank, CoinBankEntry, getCoinBank, requestCashOut } from '@/lib/api';
+import { CoinBank, CoinBankEntry, getCoinBank, getRateSchedule, RateWeek, requestCashOut } from '@/lib/api';
 import { getBoundKid } from '@/lib/device-session';
 import { fmtCoins } from '@/lib/format';
 import { Color, Ink, Radius } from '@/theme/tokens';
@@ -28,6 +29,7 @@ export default function KidBank() {
 
   const [childId, setChildId] = useState<number | null>(null);
   const [bank, setBank] = useState<CoinBank | null>(null);
+  const [rateWeek, setRateWeek] = useState<RateWeek | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,9 @@ export default function KidBank() {
         return;
       }
       setChildId(bound.id);
-      setBank(await getCoinBank(bound.id));
+      const [nextBank, nextRates] = await Promise.all([getCoinBank(bound.id), getRateSchedule()]);
+      setBank(nextBank);
+      setRateWeek(nextRates);
     } catch {
       setError('Could not open the coin bank.');
     } finally {
@@ -171,6 +175,11 @@ export default function KidBank() {
                 Worth {fmtPesoAmount(bank.peso_value)}
               </AppText>
             </Card>
+
+            {/* Weekly rate forecast — see which day pays best before cashing out */}
+            <View style={{ marginTop: 14 }}>
+              <RateTrendCard week={rateWeek} />
+            </View>
 
             {/* Pending cash-out waiting state */}
             {pending ? (
