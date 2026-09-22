@@ -522,6 +522,28 @@ export async function requestCashOut(childId: number, coins: number): Promise<Ca
   return json<CashOutRequest>(res);
 }
 
+/** One day of the weekly exchange-rate forecast. */
+export interface RateDay {
+  date: string;
+  weekday: string;
+  peso_per_coin: number;
+  is_today: boolean;
+  is_past: boolean;
+}
+
+/** The current week's rate forecast plus the live applied rate right now. */
+export interface RateWeek {
+  week_start: string | null;
+  peso_per_coin: number | null;
+  days: RateDay[];
+}
+
+/** Kid-facing read of this week's exchange-rate forecast (unauthenticated). */
+export async function getRateSchedule(): Promise<RateWeek> {
+  const res = await apiFetch('/family/rate_schedule');
+  return json<RateWeek>(res);
+}
+
 /** Read the family's coin -> peso rate (admin). */
 export async function getFamilySettings(token: string): Promise<{ peso_per_coin: number }> {
   const res = await apiFetch('/family/settings', { headers: authHeaders(token) });

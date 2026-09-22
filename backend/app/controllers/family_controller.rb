@@ -38,6 +38,33 @@ class FamilyController < ApplicationController
     render json: { pin_set: true }
   end
 
+  # GET /family/rate_schedule  (kid-facing) — the current week's rate forecast + live rate.
+  # Lazily ensures the week exists so the trend graph is never empty (no push on this read).
+  def rate_schedule
+    family = Family.first
+    if family.nil?
+      return render json: { week_start: nil, peso_per_coin: nil, days: [] }
+    end
+
+    today = WeeklyRateScheduler.today
+    monday = WeeklyRateScheduler.monday_of(today)
+    entries = WeeklyRateScheduler.ensure_week(family, monday)
+
+    render json: {
+      week_start: monday.iso8601,
+      peso_per_coin: family.peso_per_coin.to_f,
+      days: entries.map { |e|
+        {
+          date: e.on_date.iso8601,
+          weekday: e.on_date.strftime("%a"),
+          peso_per_coin: e.peso_per_coin.to_f,
+          is_today: e.on_date == today,
+          is_past: e.on_date < today,
+        }
+      },
+    }
+  end
+
   # GET /family/pin_status  (kid-facing) — does a PIN exist? Drives whether switching is guarded.
   def pin_status
     render json: { pin_set: Family.first&.pin_set? || false }

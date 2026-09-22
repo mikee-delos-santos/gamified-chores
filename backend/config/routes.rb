@@ -42,6 +42,9 @@ Rails.application.routes.draw do
   get "family/settings" => "family#settings"
   patch "family/settings" => "family#update_settings"
 
+  # Weekly exchange-rate forecast (kid-facing read): the current week's 7 rates + live rate.
+  get "family/rate_schedule" => "family#rate_schedule"
+
   # Child profiles: index/show are kid-facing (unauthenticated); create/update/destroy are
   # admin-only (guarded in the controller).
   resources :child_profiles, only: [:index, :show, :create, :update, :destroy]

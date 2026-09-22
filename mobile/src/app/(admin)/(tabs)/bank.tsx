@@ -12,15 +12,18 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { RateTrendCard } from '@/components/ui/rate-trend-card';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { useWebPullToRefresh } from '@/hooks/use-web-pull-to-refresh';
 import {
   CashOutRequest,
   ChildProfile,
+  RateWeek,
   approveCashOut,
   denyCashOut,
   getFamilySettings,
+  getRateSchedule,
   listCashOutRequests,
   listChildProfiles,
   updateFamilySettings,
@@ -40,6 +43,7 @@ export default function AdminBank() {
   const [pesoPerCoin, setPesoPerCoin] = useState(0);
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [requests, setRequests] = useState<CashOutRequest[]>([]);
+  const [rateWeek, setRateWeek] = useState<RateWeek | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,15 +56,17 @@ export default function AdminBank() {
     if (!token) return;
     setError(null);
     try {
-      const [settings, kids, pending] = await Promise.all([
+      const [settings, kids, pending, rates] = await Promise.all([
         getFamilySettings(token),
         listChildProfiles(),
         listCashOutRequests(token, 'pending'),
+        getRateSchedule(),
       ]);
       setRate(String(settings.peso_per_coin));
       setPesoPerCoin(settings.peso_per_coin);
       setChildren([...kids].sort((a, b) => b.balance - a.balance));
       setRequests(pending);
+      setRateWeek(rates);
     } catch {
       setError('Could not load the coin bank.');
     } finally {
@@ -194,7 +200,8 @@ export default function AdminBank() {
                 Coin → peso rate
               </AppText>
               <AppText size={12} weight={700} color={Ink.t55}>
-                What one coin is worth in pesos. Shown to kids only in their coin bank.
+                What one coin is worth in pesos. Sets it now, but the weekly forecast takes over
+                again at midnight (Manila).
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <AppText size={15} weight={800} color={Color.navy}>
@@ -215,6 +222,10 @@ export default function AdminBank() {
                 </AppText>
               ) : null}
             </Card>
+
+            <View style={{ marginBottom: 18 }}>
+              <RateTrendCard week={rateWeek} />
+            </View>
 
             <AppText size={18} weight={800} color={Color.navy} style={{ marginBottom: 10 }}>
               Cash-outs to approve

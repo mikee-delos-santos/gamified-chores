@@ -8,6 +8,7 @@ class Family < ApplicationRecord
   has_many :chores, dependent: :destroy
   has_many :chore_templates, dependent: :destroy
   has_many :push_subscriptions, dependent: :destroy
+  has_many :scheduled_exchange_rates, dependent: :destroy
   has_many :cash_out_requests, through: :child_profiles
 
   validates :name, presence: true
