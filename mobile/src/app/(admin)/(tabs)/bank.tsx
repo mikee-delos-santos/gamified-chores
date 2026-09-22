@@ -56,17 +56,21 @@ export default function AdminBank() {
     if (!token) return;
     setError(null);
     try {
-      const [settings, kids, pending, rates] = await Promise.all([
+      const [settings, kids, pending] = await Promise.all([
         getFamilySettings(token),
         listChildProfiles(),
         listCashOutRequests(token, 'pending'),
-        getRateSchedule(),
       ]);
       setRate(String(settings.peso_per_coin));
       setPesoPerCoin(settings.peso_per_coin);
       setChildren([...kids].sort((a, b) => b.balance - a.balance));
       setRequests(pending);
-      setRateWeek(rates);
+      // The rate forecast is non-critical; fetch it separately so a failure never blanks balances.
+      try {
+        setRateWeek(await getRateSchedule());
+      } catch {
+        setRateWeek(null);
+      }
     } catch {
       setError('Could not load the coin bank.');
     } finally {

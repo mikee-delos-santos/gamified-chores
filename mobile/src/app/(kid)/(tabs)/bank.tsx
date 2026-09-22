@@ -47,9 +47,14 @@ export default function KidBank() {
         return;
       }
       setChildId(bound.id);
-      const [nextBank, nextRates] = await Promise.all([getCoinBank(bound.id), getRateSchedule()]);
-      setBank(nextBank);
-      setRateWeek(nextRates);
+      // Balance is the core of this screen and must load on its own. The rate forecast is a
+      // nice-to-have, so fetch it separately and never let its failure blank the balance.
+      setBank(await getCoinBank(bound.id));
+      try {
+        setRateWeek(await getRateSchedule());
+      } catch {
+        setRateWeek(null);
+      }
     } catch {
       setError('Could not open the coin bank.');
     } finally {
