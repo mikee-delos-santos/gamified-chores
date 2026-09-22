@@ -7,7 +7,11 @@ Deploys to Railway. Scaffolded in **PC-8 — Rails API-only app boots locally**.
 
 - Rails 8.1, `--api` mode, PostgreSQL (`pg`).
 - Solid Queue / Solid Cache / Solid Cable are included (Rails 8 defaults; DB-backed, no Redis).
-  Background jobs (e.g. push in Epic E) will use Solid Queue.
+  Background jobs (e.g. push in Epic E) use Solid Queue.
+- **Recurring jobs** live in `config/recurring.yml` (the weekly exchange-rate forecast:
+  `GenerateWeeklyRatesJob` + `ApplyDailyRateJob`). Cron is UTC; the jobs derive the Manila date
+  themselves. The Solid Queue supervisor only runs when `SOLID_QUEUE_IN_PUMA=true` is set on the
+  service — without it the recurring schedule never fires. That env var must stay set in prod.
 - Kamal was skipped — we deploy on **Railway** using the **Railpack** builder, configured in
   `railway.json` (builder + start command). The Rails-generated Dockerfile is parked as
   `Dockerfile.disabled` so Railway doesn't auto-build with it; it still works locally via
